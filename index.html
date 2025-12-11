@@ -12,10 +12,12 @@
 </head>
 
 <body>
+<!-- Your existing HTML structure remains the same -->
 <div class="header">
     Home Automation
     <button class="edit-btn" id="editBtn">✎ Edit</button>
     <button class="header-control save-btn" id="saveBtn">💾 Save</button>
+    <button id="clearAllBtn" class="header-control clear-all-btn" title="Clear all buttons, entities, and local storage">🗑️ Clear All</button>
     <div class="edit-controls" id="editControls">
         <button class="header-control small-btn" id="imageBtn" title="Change Image">
             <i class="fas fa-image"></i>
@@ -99,8 +101,10 @@
                         <option value="fa-sun">Sun</option>
                         <option value="fa-lamp">Lamp</option>
                         <option value="fa-lightbulb-on">Light On</option>
+                        <option value="fa-sliders-h">Dimmer Slider</option>
                     </select>
                 </div>
+                <!-- Brightness group removed as requested -->
                 <div class="form-actions">
                     <button type="button" class="btn-delete" id="deleteBtn">Delete</button>
                     <button type="submit" class="btn-update">Update</button>
@@ -110,7 +114,10 @@
     </div>
 </div>
 
+<!-- Scripts -->
+<script src="toggle-button.js"></script>
 <script src="button.js"></script>
+<script src="dimmer.js"></script>
 <script src="main.js"></script>
 </body>
 </html>

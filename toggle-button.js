@@ -28,6 +28,33 @@ class ToggleButton {
         }
     }
 
+    // Update entity ID (NEW METHOD)
+    updateEntityId(newEntityId) {
+        // Remove from old entityId group
+        if (this.entityId && window.EntityButtons[this.entityId]) {
+            const index = window.EntityButtons[this.entityId].indexOf(this);
+            if (index > -1) {
+                window.EntityButtons[this.entityId].splice(index, 1);
+            }
+        }
+
+        // Update entityId
+        this.entityId = newEntityId;
+
+        // Add to new entityId group
+        if (newEntityId) {
+            if (!window.EntityButtons[newEntityId]) {
+                window.EntityButtons[newEntityId] = [];
+            }
+            window.EntityButtons[newEntityId].push(this);
+        }
+
+        // Get initial state for new entity
+        if (newEntityId && window.ws && window.ws.readyState === WebSocket.OPEN) {
+            this.getInitialState();
+        }
+    }
+
     // Handle click
     onClick() {
         if (this.entityId) {

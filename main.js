@@ -1,3 +1,4 @@
+// main.js - Updated with dimmer support
 document.addEventListener("DOMContentLoaded", () => {
     // DOM Elements
     const container = document.getElementById("container");
@@ -83,10 +84,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (buttons.updateButtonPositions) {
             buttons.updateButtonPositions();
         }
+        if (window.DimmerModule && DimmerModule.updatePositions) {
+            DimmerModule.updatePositions();
+        }
     }
 
     // Handle image panning
     function startPan(e) {
+        // Don't start panning if clicking on a button
+        if (e.target.closest('.light-button')) return;
+        
         isDragging = true;
         container.classList.add('grabbing');
 
@@ -126,7 +133,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Maximum panning amounts
         const maxX = Math.max(0, (scaledW - containerW) / 2);
         const maxY = Math.max(0, (scaledH - containerH) / 2);
-
 
         // Allow dragging only if image is larger than container
         if (scaledW > containerW) {
@@ -177,9 +183,49 @@ document.addEventListener("DOMContentLoaded", () => {
         applyTransform();
     }
 
-    // Save design to JSON file
+    // Update brightness via WebSocket
+    function updateBrightness(entityId, brightness, buttonId) {
+        if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
+            console.log("Not ready to update brightness");
+            return;
+        }
+
+        // Convert percentage to HA brightness value (0-255)
+        const haBrightness = Math.round((brightness / 100) * 255);
+
+        ws.send(JSON.stringify({
+            id: Date.now(),
+            type: "call_service",
+            domain: "light",
+            service: "turn_on",
+            service_data: {
+                entity_id: entityId,
+                brightness: haBrightness
+            }
+        }));
+
+        console.log(`Brightness updated to ${brightness}% (${haBrightness})`);
+
+        // Update footer
+        updateFooter(`Brightness set to ${brightness}%`);
+    }
+
+    // Save design to JSON file - UPDATED
     function saveDesign() {
-        const designData = buttons.save();
+        const buttonData = buttons.save();
+        const dimmerData = window.DimmerModule ? DimmerModule.getDimmerButtons() : [];
+        
+        const designData = {
+            meta: {
+                savedAt: new Date().toISOString(),
+                version: '1.1',
+                hasDimmers: dimmerData.length > 0
+            },
+            image: buttonData.image || '',
+            buttons: buttonData.buttons || [],
+            dimmers: dimmerData,
+            transform: buttonData.transform || {}
+        };
 
         // Create blob and download
         const blob = new Blob([JSON.stringify(designData, null, 2)], { type: 'application/json' });
@@ -198,7 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updateFooter('Design saved!');
     }
 
-    // Load design from JSON file
+    // Load design from JSON file - UPDATED
     function loadDesign(file) {
         const reader = new FileReader();
 
@@ -206,12 +252,32 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 const designData = JSON.parse(e.target.result);
 
-                // Helper: load buttons + update HA states
+                // Helper: load data + update HA states
                 function finishLoading() {
-                    buttons.load(designData);
+                    // Load regular buttons
+                    if (designData.buttons) {
+                        buttons.load(designData);
+                    }
+                    
+                    // Load dimmers
+                    if (designData.dimmers && window.DimmerModule) {
+                        // Clear existing dimmers first
+                        const currentDimmers = DimmerModule.getDimmerButtons();
+                        if (currentDimmers && currentDimmers.length > 0) {
+                            currentDimmers.forEach(dimmer => {
+                                DimmerModule.deleteButton(dimmer.id);
+                            });
+                        }
+                        
+                        // Load new dimmers
+                        designData.dimmers.forEach(dimmerConfig => {
+                            DimmerModule.create(dimmerConfig);
+                        });
+                    }
+
                     initImage();
 
-                    // 🔥 Request updated HA light states
+                    // Request updated HA light states
                     if (ready && ws && ws.readyState === WebSocket.OPEN) {
                         ws.send(JSON.stringify({
                             id: Date.now(),
@@ -222,39 +288,29 @@ document.addEventListener("DOMContentLoaded", () => {
                     updateFooter("Design loaded!");
                 }
 
-                // -------- IMAGE HANDLING ----------
+                // Image handling
                 if (designData.image) {
                     if (designData.image.startsWith('data:')) {
-                        // Image is embedded → load directly
                         img.onload = finishLoading;
                         img.src = designData.image;
-
                     } else {
-                        // External image → user must upload the file
                         if (confirm("Image not included — please upload the floorplan image now.")) {
-
-                            imageFileInput.onclick = null; // remove previous listeners
                             imageFileInput.onchange = function () {
                                 const imageFile = imageFileInput.files[0];
                                 const imageReader = new FileReader();
-
                                 imageReader.onload = function (ev) {
                                     img.onload = finishLoading;
                                     img.src = ev.target.result;
                                 };
-
                                 imageReader.readAsDataURL(imageFile);
                             };
-
                             imageFileInput.click();
                             return;
                         }
                     }
-
                 } else {
-                    // No image in design → just load buttons
                     img.onload = finishLoading;
-                    img.src = img.src; // trigger load
+                    img.src = img.src;
                 }
 
             } catch (error) {
@@ -308,7 +364,7 @@ document.addEventListener("DOMContentLoaded", () => {
             initImage();
         });
 
-        // Edit mode toggle
+        // Edit mode toggle - UPDATED
         editBtn.addEventListener('click', () => {
             isEditMode = !isEditMode;
 
@@ -318,16 +374,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 container.classList.add('edit-mode');
                 editControls.style.display = 'flex';
 
-                // Enable edit mode in buttons module
+                // Enable edit mode in both modules
                 buttons.enableEditMode(true);
+                if (window.DimmerModule && DimmerModule.enableEditMode) {
+                    DimmerModule.enableEditMode(true);
+                }
             } else {
                 editBtn.textContent = '✎ Edit';
                 editBtn.classList.remove('edit-mode');
                 container.classList.remove('edit-mode');
                 editControls.style.display = 'none';
 
-                // Disable edit mode in buttons module
+                // Disable edit mode in both modules
                 buttons.enableEditMode(false);
+                if (window.DimmerModule && DimmerModule.enableEditMode) {
+                    DimmerModule.enableEditMode(false);
+                }
             }
         });
 
@@ -395,25 +457,81 @@ document.addEventListener("DOMContentLoaded", () => {
                 }, 100);
             }
             else if (data.type === "result" && Array.isArray(data.result)) {
-
                 const states = data.result;
 
+                // Update regular buttons
                 buttons.getButtons().forEach(light => {
                     const st = states.find(s => s.entity_id === light.entityId);
                     if (st) {
                         updateLightUI(light.id, st.state === "on");
+                        
+                        // Also update dimmer if it's a dimmer button
+                        if (light.type === 'dimmer') {
+                            const brightness = st.attributes?.brightness;
+                            if (brightness !== undefined) {
+                                // Convert HA brightness (0-255) to percentage
+                                const brightnessPercent = Math.round((brightness / 255) * 100);
+                                if (window.DimmerModule && DimmerModule.handleStateUpdate) {
+                                    DimmerModule.handleStateUpdate(
+                                        light.entityId, 
+                                        st.state,
+                                        brightnessPercent
+                                    );
+                                }
+                            }
+                        }
                     }
                 });
 
+                // Update dimmer buttons
+                if (window.DimmerModule && DimmerModule.getDimmerButtons) {
+                    DimmerModule.getDimmerButtons().forEach(dimmer => {
+                        const st = states.find(s => s.entity_id === dimmer.entityId);
+                        if (st) {
+                            const brightness = st.attributes?.brightness;
+                            const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
+                            DimmerModule.handleStateUpdate(
+                                dimmer.entityId,
+                                st.state,
+                                brightnessPercent
+                            );
+                        }
+                    });
+                }
             }
-
             else if (data.type === "event" && data.event?.event_type === "state_changed") {
-                const allLights = buttons.getButtons().filter(l => l.entityId === data.event.data.entity_id);
-
+                const entityId = data.event.data.entity_id;
+                const newState = data.event.data.new_state;
+                
+                // Update regular buttons
+                const allLights = buttons.getButtons().filter(l => l.entityId === entityId);
                 allLights.forEach(light => {
-                    updateLightUI(light.id, data.event.data.new_state.state === "on");
+                    updateLightUI(light.id, newState.state === "on");
+                    
+                    // Update dimmer if applicable
+                    if (light.type === 'dimmer') {
+                        const brightness = newState.attributes?.brightness;
+                        const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
+                        if (window.DimmerModule && DimmerModule.handleStateUpdate) {
+                            DimmerModule.handleStateUpdate(
+                                entityId,
+                                newState.state,
+                                brightnessPercent
+                            );
+                        }
+                    }
                 });
 
+                // Update dimmer module
+                if (window.DimmerModule && DimmerModule.handleStateUpdate) {
+                    const brightness = newState.attributes?.brightness;
+                    const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
+                    DimmerModule.handleStateUpdate(
+                        entityId,
+                        newState.state,
+                        brightnessPercent
+                    );
+                }
             }
         };
 
@@ -423,6 +541,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 const btn = document.getElementById(light.id);
                 if (btn) btn.disabled = true;
             });
+            
+            // Disable dimmer buttons too
+            if (window.DimmerModule && DimmerModule.getDimmerButtons) {
+                DimmerModule.getDimmerButtons().forEach(dimmer => {
+                    const btn = document.getElementById(dimmer.id);
+                    if (btn) btn.disabled = true;
+                });
+            }
         };
 
         ws.onclose = () => {
@@ -431,6 +557,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 const btn = document.getElementById(light.id);
                 if (btn) btn.disabled = true;
             });
+            
+            // Disable dimmer buttons too
+            if (window.DimmerModule && DimmerModule.getDimmerButtons) {
+                DimmerModule.getDimmerButtons().forEach(dimmer => {
+                    const btn = document.getElementById(dimmer.id);
+                    if (btn) btn.disabled = true;
+                });
+            }
+            
             ready = false;
             setTimeout(connectWebSocket, 3000);
         };
@@ -438,6 +573,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Toggle light via WebSocket
     function toggleLight(entityId, buttonId) {
+        // Don't toggle if we're in edit mode
+        if (isEditMode) {
+            return;
+        }
+        
         if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
             console.log("Not ready to toggle");
             return;
@@ -448,6 +588,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const btn = document.getElementById(buttonId);
         const isOn = btn.classList.contains('on');
+        
+        // For dimmers, ALWAYS open dimmer modal when clicked
+        if (light.type === 'dimmer') {
+            // Open dimmer modal
+            if (window.DimmerModule && DimmerModule.openDimmerModal) {
+                DimmerModule.openDimmerModal(light);
+            }
+            return;
+        }
+
+        // Regular toggle buttons
         const service = isOn ? "turn_off" : "turn_on";
 
         ws.send(JSON.stringify({
@@ -474,9 +625,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (isOn) {
             btn.classList.add('on');
+            btn.classList.remove('off');
             icon.classList.add('fa-solid');
         } else {
             btn.classList.remove('on');
+            btn.classList.add('off');
             icon.classList.remove('fa-solid');
         }
 
@@ -492,8 +645,16 @@ document.addEventListener("DOMContentLoaded", () => {
     function init() {
         // Initialize buttons module first
         buttons.init(pan, getImageMetadata, {
-            toggleLight: toggleLight
+            toggleLight: toggleLight,
+            updateBrightness: updateBrightness
         });
+
+        // Initialize dimmer module if available
+        if (window.DimmerModule && DimmerModule.init) {
+            DimmerModule.init({
+                updateBrightness: updateBrightness
+            });
+        }
 
         initImage();
         setupEventListeners();
