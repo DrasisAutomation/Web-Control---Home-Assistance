@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - User Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #fafafa;
+            min-height: 100vh;
+            color: #1a1a1a;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        /* Header */
+        .header {
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-icon {
+            width: 40px;
+            height: 40px;
+            background: #0078d4;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .header-content h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1a1a1a;
+            letter-spacing: -0.5px;
+        }
+
+        .header-content p {
+            color: #737373;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* Stats Dashboard */
+        .stats-dashboard {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: #fff;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #737373;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-label-icon {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .stat-total {
+            border-top: 4px solid #0078d4;
+        }
+
+        .stat-total .stat-value {
+            color: #0078d4;
+        }
+
+        .stat-approved {
+            border-top: 4px solid #166534;
+        }
+
+        .stat-approved .stat-value {
+            color: #166534;
+        }
+
+        .stat-pending {
+            border-top: 4px solid #d97706;
+        }
+
+        .stat-pending .stat-value {
+            color: #d97706;
+        }
+
+        .stat-rejected {
+            border-top: 4px solid #dc2626;
+        }
+
+        .stat-rejected .stat-value {
+            color: #dc2626;
+        }
+
+        /* Search Bar */
+        .search-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #a3a3a3;
+            pointer-events: none;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 12px 10px 40px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #fff;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+
+        .search-input::placeholder {
+            color: #a3a3a3;
+        }
+
+        .filter-select {
+            padding: 10px 32px 10px 12px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #fff;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            min-width: 140px;
+            transition: all 0.2s ease;
+            flex: 1;
+        }
+
+        .filter-select:focus {
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+
+        /* Table */
+        .table-container {
+            background: #fff;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+
+        thead {
+            background: #fafafa;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #737373;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #f5f5f5;
+            transition: background-color 0.15s ease;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background-color: #fafafa;
+        }
+
+        td {
+            padding: 16px;
+            font-size: 14px;
+        }
+
+        /* User Cell */
+        .user-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e5e5e5 0%, #d4d4d4 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            color: #525252;
+            flex-shrink: 0;
+        }
+
+        .user-name {
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        /* Email */
+        .email {
+            color: #737373;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-approved {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-rejected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            position: relative;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-approve {
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .btn-approve:hover {
+            background: #dcfce7;
+        }
+
+        .btn-reject {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .btn-reject:hover {
+            background: #fee2e2;
+        }
+
+        .btn-icon {
+            background: transparent;
+            color: #737373;
+            padding: 6px;
+            border: 1px solid transparent;
+        }
+
+        .btn-icon:hover {
+            background: #f5f5f5;
+            color: #1a1a1a;
+        }
+
+        /* Three-dot menu */
+        .three-dot-menu {
+            position: relative;
+        }
+
+        .menu-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: #fff;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            min-width: 160px;
+            z-index: 100;
+            display: none;
+            margin-top: 4px;
+        }
+
+        .menu-dropdown.active {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .menu-item {
+            padding: 10px 16px;
+            font-size: 14px;
+            color: #1a1a1a;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.15s ease;
+        }
+
+        .menu-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .menu-item.delete {
+            color: #991b1b;
+        }
+
+        .menu-item.approve {
+            color: #166534;
+        }
+
+        .menu-item.reject {
+            color: #92400e;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 64px 24px;
+            color: #737373;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        .user-cell {
+            min-width: 250px;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .stats-dashboard {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .stat-value {
+                font-size: 28px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .header-icon {
+                width: 36px;
+                height: 36px;
+            }
+
+            .header-content h1 {
+                font-size: 24px;
+            }
+
+            .search-container {
+                flex-direction: column;
+            }
+
+            .search-input-wrapper,
+            .filter-select {
+                width: 100%;
+                min-width: unset;
+            }
+
+            .filter-select {
+                flex: unset;
+            }
+
+            .menu-dropdown {
+                position: absolute;
+                top: 100%;
+                right: 0;
+                margin-top: 4px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 20px 16px;
+            }
+
+            .header {
+                margin-bottom: 24px;
+            }
+
+            .stats-dashboard {
+                margin-bottom: 24px;
+            }
+
+            .stat-card {
+                padding: 16px;
+            }
+
+            .stat-value {
+                font-size: 24px;
+            }
+
+            .stat-label {
+                font-size: 13px;
+            }
+
+            .email-cell {
+                display: table-cell;
+            }
+
+            th:nth-child(2),
+            td:nth-child(2) {
+                display: table-cell;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .btn {
+                padding: 8px 10px;
+                font-size: 12px;
+                justify-content: center;
+            }
+
+            .three-dot-menu {
+                position: relative;
+            }
+
+            .menu-dropdown {
+                position: absolute;
+                top: 100%;
+                right: 0;
+                bottom: auto;
+                left: auto;
+                margin-top: 4px;
+                border-radius: 6px;
+                max-height: none;
+                overflow-y: visible;
+            }
+
+            table {
+                min-width: unset;
+            }
+
+            th,
+            td {
+                padding: 12px 8px;
+            }
+
+            .user-cell {
+                min-width: 200px;
+            }
+        }
+
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+        }
+
+        .toast {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease;
+            margin-top: 8px;
+        }
+
+        .toast.success {
+            background: #166534;
+        }
+
+        .toast.error {
+            background: #991b1b;
+        }
+
+        .toast.info {
+            background: #0078d4;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* Loading Spinner */
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #666;
+            font-size: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .loading::after {
+            content: "";
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0078d4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+            </div>
+            <div class="header-content">
+                <h1>User Management</h1>
+                <p>Manage and approve user registrations</p>
+            </div>
+        </header>
+
+        <!-- Stats Dashboard -->
+        <div class="stats-dashboard" id="statsDashboard">
+            <div class="stat-card stat-total">
+                <div class="stat-label">
+                    <span class="stat-label-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </span>
+                    Total Users
+                </div>
+                <div class="stat-value" id="total-count">0</div>
+            </div>
+            <div class="stat-card stat-approved">
+                <div class="stat-label">
+                    <span class="stat-label-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                    </span>
+                    Approved
+                </div>
+                <div class="stat-value" id="approved-count">0</div>
+            </div>
+            <div class="stat-card stat-pending">
+                <div class="stat-label">
+                    <span class="stat-label-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                    </span>
+                    Pending
+                </div>
+                <div class="stat-value" id="pending-count">0</div>
+            </div>
+            <div class="stat-card stat-rejected">
+                <div class="stat-label">
+                    <span class="stat-label-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="15" y1="9" x2="9" y2="15"></line>
+                            <line x1="9" y1="9" x2="15" y2="15"></line>
+                        </svg>
+                    </span>
+                    Rejected
+                </div>
+                <div class="stat-value" id="rejected-count">0</div>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.3-4.3"></path>
+                </svg>
+                <input type="text" class="search-input" id="searchInput" placeholder="Search users...">
+            </div>
+            <select class="filter-select" id="statusFilter">
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+            </select>
+        </div>
+
+        <div class="table-container">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th class="email-cell">Email</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <tr>
+                            <td colspan="4" class="loading">Loading users...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // Replace with your actual Firebase config
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Global variables
+        let users = [];
+        let activeMenu = null;
+
+        // Load users from Firestore on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUsers();
+            setupRealTimeUpdates();
+        });
+
+        // Load users from Firestore
+        async function loadUsers() {
+            try {
+                const querySnapshot = await db.collection('users').orderBy('createdAt', 'desc').get();
+                users = [];
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    // Check if email is an admin email
+                    const isAdminEmail = data.email === 'mohancheenu04@gmail.com' || 
+                                         data.email === 'drasisdata@gmail.com';
+                    
+                    users.push({ 
+                        id: doc.id, 
+                        ...data,
+                        isAdminEmail: isAdminEmail
+                    });
+                });
+                updateUserStats();
+                renderUsers();
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showToast('Error loading users', 'error');
+                // If Firebase fails, show dummy data for testing
+                loadDummyData();
+            }
+        }
+
+        // Real-time updates
+        function setupRealTimeUpdates() {
+            db.collection('users').onSnapshot((snapshot) => {
+                loadUsers();
+            }, (error) => {
+                console.error('Real-time update error:', error);
+            });
+        }
+
+        // Dummy data for testing if Firebase fails
+        function loadDummyData() {
+            users = [
+                { id: '1', name: 'John Doe', email: 'john.doe@example.com', status: 'pending', role: 'user' },
+                { id: '2', name: 'Jane Smith', email: 'jane.smith@example.com', status: 'approved', role: 'user' },
+                { id: '3', name: 'Mike Johnson', email: 'mike.j@example.com', status: 'pending', role: 'user' },
+                { id: '4', name: 'Sarah Wilson', email: 'sarah.w@example.com', status: 'rejected', role: 'user' },
+                { id: '5', name: 'Alex Brown', email: 'alex.brown@example.com', status: 'approved', role: 'user' },
+                { id: '6', name: 'Emily Davis', email: 'emily.d@example.com', status: 'pending', role: 'user' },
+                { id: '7', name: 'Admin User', email: 'mohancheenu04@gmail.com', status: 'approved', role: 'admin', isAdminEmail: true },
+                { id: '8', name: 'Drasis Admin', email: 'drasisdata@gmail.com', status: 'approved', role: 'admin', isAdminEmail: true }
+            ];
+            updateUserStats();
+            renderUsers();
+            showToast('Using demo data (Firebase not configured)', 'info');
+        }
+
+        // Update statistics
+        function updateUserStats() {
+            const pending = users.filter(u => u.status === 'pending').length;
+            const approved = users.filter(u => u.status === 'approved').length;
+            const rejected = users.filter(u => u.status === 'rejected').length;
+            const total = users.length;
+            
+            document.getElementById('pending-count').textContent = pending;
+            document.getElementById('approved-count').textContent = approved;
+            document.getElementById('rejected-count').textContent = rejected;
+            document.getElementById('total-count').textContent = total;
+        }
+
+        // Get initials from name
+        function getInitials(name) {
+            if (!name) return '??';
+            return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        }
+
+        // Toggle menu dropdown
+        function toggleMenu(userId, event) {
+            if (activeMenu === userId) {
+                closeMenu();
+                return;
+            }
+
+            closeMenu();
+            activeMenu = userId;
+            const menu = document.getElementById(`menu-${userId}`);
+            if (menu) {
+                menu.classList.add('active');
+
+                // Close menu when clicking outside
+                setTimeout(() => {
+                    document.addEventListener('click', closeMenuOnClickOutside);
+                }, 10);
+            }
+
+            // Prevent the click from bubbling up
+            if (event) {
+                event.stopPropagation();
+            }
+        }
+
+        // Close menu
+        function closeMenu() {
+            if (activeMenu) {
+                const menu = document.getElementById(`menu-${activeMenu}`);
+                if (menu) {
+                    menu.classList.remove('active');
+                }
+                activeMenu = null;
+                document.removeEventListener('click', closeMenuOnClickOutside);
+            }
+        }
+
+        // Close menu when clicking outside
+        function closeMenuOnClickOutside(event) {
+            const menu = document.getElementById(`menu-${activeMenu}`);
+            const threeDotButton = document.querySelector(`.three-dot-menu[data-user="${activeMenu}"] .btn-icon`);
+
+            if (menu && !menu.contains(event.target) &&
+                !(threeDotButton && threeDotButton.contains(event.target))) {
+                closeMenu();
+            }
+        }
+
+        // Update user status
+        async function updateUserStatus(userId, status) {
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+            
+            // Don't allow modifying admin emails
+            if (user.isAdminEmail) {
+                showToast('Cannot modify admin email accounts', 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to ${status} this user?`)) return;
+            
+            try {
+                await db.collection('users').doc(userId).update({
+                    status: status,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                showToast(`User ${status} successfully`, 'success');
+                closeMenu();
+                
+            } catch (error) {
+                console.error('Error updating user:', error);
+                showToast('Error updating user. Using demo mode.', 'error');
+                // For demo purposes, update locally
+                user.status = status;
+                updateUserStats();
+                renderUsers();
+            }
+        }
+
+        // Delete user
+        async function deleteUser(userId) {
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+            
+            // Don't allow deleting admin emails
+            if (user.isAdminEmail) {
+                showToast('Cannot delete admin email accounts', 'error');
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+            
+            try {
+                await db.collection('users').doc(userId).delete();
+                showToast('User deleted successfully', 'success');
+                closeMenu();
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                showToast('Error deleting user. Using demo mode.', 'error');
+                // For demo purposes, delete locally
+                users = users.filter(u => u.id !== userId);
+                updateUserStats();
+                renderUsers();
+            }
+        }
+
+        // Filter users
+        function getFilteredUsers() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            return users.filter(user => {
+                const matchesSearch = (user.name && user.name.toLowerCase().includes(searchTerm)) ||
+                    (user.email && user.email.toLowerCase().includes(searchTerm));
+                const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+                return matchesSearch && matchesStatus;
+            });
+        }
+
+        // Render users table
+        function renderUsers() {
+            const tbody = document.getElementById('usersTableBody');
+            const filteredUsers = getFilteredUsers();
+
+            if (filteredUsers.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="empty-state">
+                            <p>No users found</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filteredUsers.map(user => {
+                const isAdmin = user.role === 'admin' || user.isAdminEmail;
+                
+                return `
+                <tr>
+                    <td>
+                        <div class="user-cell">
+                            <div class="avatar">${getInitials(user.name)}</div>
+                            <div>
+                                <div class="user-name">${user.name || 'No Name'}</div>
+                                ${isAdmin ? '<div style="font-size: 11px; color: #d97706;">Admin</div>' : ''}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="email-cell email">${user.email}</td>
+                    <td>
+                        <span class="status-badge status-${user.status}">${user.status}</span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            ${!isAdmin ? `
+                                <div class="three-dot-menu" data-user="${user.id}">
+                                    <button class="btn btn-icon" onclick="toggleMenu('${user.id}', event)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="1"/>
+                                            <circle cx="19" cy="12" r="1"/>
+                                            <circle cx="5" cy="12" r="1"/>
+                                        </svg>
+                                    </button>
+                                    <div class="menu-dropdown" id="menu-${user.id}">
+                                        ${user.status !== 'approved' ? `
+                                            <div class="menu-item approve" onclick="updateUserStatus('${user.id}', 'approved')">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M20 6 9 17l-5-5"/>
+                                                </svg>
+                                                Approve
+                                            </div>
+                                        ` : ''}
+                                        ${user.status !== 'rejected' ? `
+                                            <div class="menu-item reject" onclick="updateUserStatus('${user.id}', 'rejected')">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M18 6 6 18"/>
+                                                    <path d="m6 6 12 12"/>
+                                                </svg>
+                                                Reject
+                                            </div>
+                                        ` : ''}
+                                        <div class="menu-item delete" onclick="deleteUser('${user.id}')">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M3 6h18"/>
+                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                                <line x1="10" y1="11" x2="10" y2="17"/>
+                                                <line x1="14" y1="11" x2="14" y2="17"/>
+                                            </svg>
+                                            Delete
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : `
+                                <span style="color: #737373; font-size: 12px;">Admin Account</span>
+                            `}
+                        </div>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', () => renderUsers());
+        document.getElementById('statusFilter').addEventListener('change', () => renderUsers());
+
+        // Close menu on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeMenu();
+            }
+        });
+    </script>
+</body>
+</html>

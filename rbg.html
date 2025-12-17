@@ -153,6 +153,7 @@
             font-size: 14px;
             color: #000000;
             font-family: Arial, sans-serif;
+            margin-bottom: 10px;
             font-weight: 600;
         }
 
@@ -186,6 +187,12 @@
             /* INSIDE */
         }
 
+        /* Hide + and - signs only for the RGB slider wrapper */
+        .slider-wrapper:last-child .wrapper::before,
+        .slider-wrapper:last-child .wrapper::after {
+            display: none;
+        }
+
         /* Brightness Slider */
         #brightnessSlider {
             -webkit-appearance: none;
@@ -213,16 +220,18 @@
             border: none;
         }
 
-        /* Temperature Slider - EXACT SAME DESIGN but with wider thumb */
-        #temperatureSlider {
+        /* RGB Color Slider - FULL RGB SPECTRUM GRADIENT */
+        #rgbSlider {
             -webkit-appearance: none;
             background: linear-gradient(to right, 
-                #ffffff 0%, 
-                #f2d6a2 20%, 
-                #ffc561 40%, 
-                #f1ae3a 60%, 
-                #f1951d 80%, 
-                #f28900 100%);
+                #ff0000 0%,    /* Red */
+                #ffff00 16.66%, /* Yellow */
+                #00ff00 33.33%, /* Green */
+                #00ffff 50%,    /* Cyan */
+                #0000ff 66.66%, /* Blue */
+                #ff00ff 83.33%, /* Magenta */
+                #ff0000 100%    /* Back to Red */
+            );
             position: absolute;
             top: 50%;
             left: 50%;
@@ -234,31 +243,33 @@
             cursor: pointer;
         }
 
-        /* WIDER THUMB for needle effect */
-        #temperatureSlider::-webkit-slider-thumb {
+        /* WIDER THUMB for needle effect - WHITE COLOR for contrast */
+        #rgbSlider::-webkit-slider-thumb {
             -webkit-appearance: none;
             width: 6px; /* WIDER NEEDLE */
             height: 3.5rem;
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 0;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
             cursor: grab;
             padding: 3px;
             border-radius: 10px;
+            border: 1px solid rgba(0, 0, 0, 0.3);
         }
 
-        #temperatureSlider::-moz-range-thumb {
+        #rgbSlider::-moz-range-thumb {
             width: 6px; /* WIDER NEEDLE */
             height: 3.5rem;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 0;
-            border: none;
+            border: 1px solid rgba(0, 0, 0, 0.3);
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
             cursor: grab;
         }
 
-        #temperatureSlider::-webkit-slider-thumb:hover {
-            background: rgba(255, 255, 255, 0.9);
+        #rgbSlider::-webkit-slider-thumb:hover {
+            background: rgba(255, 255, 255, 1);
+            border: 1px solid rgba(0, 0, 0, 0.5);
         }
 
         /* Remove the apply button and text styles */
@@ -282,52 +293,14 @@
             font-family: Arial, sans-serif;
         }
 
-        /* Temperature percentage display */
-        .temperature-percentage {
-            position: absolute;
-            bottom: 10px;
-            left: 0;
-            width: 100%;
-            text-align: center;
-            color: #000000;
-            font-size: 14px;
-            font-family: Arial, sans-serif;
-        }
-
-        .modal-title-text {
-            font-size: 16px;
-            font-weight: 600;
-            /* NOT bold */
-            margin-bottom: 15px;
-            color: black;
-            font-family: Arial, sans-serif;
-        }
-
-        /* For two sliders layout */
-        .percentage-container {
-            position: absolute;
-            bottom: 10px;
-            left: 0;
-            width: 100%;
-            display: flex;
-            justify-content: start;
-        }
-
-        .percentage-display {
-            width: 45%;
-            text-align: center;
-            color: #000000;
-            font-size: 14px;
-            font-family: Arial, sans-serif;
-        }
-        
-        /* Kelvin display - ADDED BELOW THE SLIDER */
-        .kelvin-display {
+        /* STATIC RGB text display */
+        .rgb-display {
             margin-top: 5px;
             font-size: 14px;
             color: #000000;
             font-family: Arial, sans-serif;
         }
+        
         .wrapper input{
              border: 1px solid black;
         }
@@ -339,7 +312,7 @@
         <i class="fas fa-lightbulb icon" id="bulbIcon"></i>
     </button>
 
-    <!-- Brightness & Temperature Modal -->
+    <!-- Brightness & RGB Modal -->
     <div class="modal-overlay" id="brightnessModal">
         <div class="modal-content">
             <button class="close-modal" id="closeModal">&times;</button>
@@ -354,13 +327,13 @@
                     <div class="percentage-display" id="brightnessValue">50%</div>
                 </div>
 
-                <!-- Temperature Slider - EXACT SAME DESIGN WITH + and - signs -->
+                <!-- RGB Color Slider - REPLACED TEMPERATURE SLIDER -->
                 <div class="slider-wrapper">
-                    <div class="slider-title">CCT</div>
+                    <div class="slider-title">Color</div>
                     <div class="wrapper">
-                        <input type="range"  min="0" max="100" value="50" id="temperatureSlider" />
+                        <input type="range" min="0" max="360" value="180" id="rgbSlider" />
                     </div>
-                    <div class="kelvin-display" id="kelvinDisplay">3000K</div>
+                    <div class="rgb-display">RGB</div> <!-- STATIC TEXT ONLY -->
                 </div>
             </div>
         </div>
@@ -397,27 +370,81 @@ function makeTest21Draggable(btn) {
 <script>
     const WS_URL = "wss://demo.lumihomepro1.com/api/websocket";
     const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzNGNlNThiNDk1Nzk0NDVmYjUxNzE2NDA0N2Q0MGNmZCIsImlhdCI6MTc2NTM0NzQ5MSwiZXhwIjoyMDgwNzA3NDkxfQ.Se5PGwx0U9aqyVRnD1uwvCv3F-aOE8H53CKA5TqsV7U";
-    const LIGHT = "light.pantry_cct_lighr_exp_room_entrance_light";
+    const LIGHT = "light.rgbw_1";
 
-    let ws, isOn = false, ready = false, currentBrightness = 50, currentTemperature = 50;
+    let ws, isOn = false, ready = false, currentBrightness = 50, currentHue = 180;
     const toggleBtn = document.getElementById('toggleBtn');
     const bulbIcon = document.getElementById('bulbIcon');
     const brightnessModal = document.getElementById('brightnessModal');
     const closeModal = document.getElementById('closeModal');
     const brightnessSlider = document.getElementById('brightnessSlider');
-    const temperatureSlider = document.getElementById('temperatureSlider');
+    const rgbSlider = document.getElementById('rgbSlider');
     const brightnessValue = document.getElementById('brightnessValue');
-    const kelvinDisplay = document.getElementById('kelvinDisplay');
 
-    // Convert percentage to Kelvin (0% = 6500K, 100% = 2000K)
-    function percentageToKelvin(percent) {
-        return Math.round(6500 - (percent / 100) * (6500 - 2000));
+    // Convert HSL to RGB (Hue: 0-360, Saturation: 0-100, Lightness: 0-100)
+    function hslToRgb(h, s, l) {
+        h /= 360;
+        s /= 100;
+        l /= 100;
+        
+        let r, g, b;
+        
+        if (s === 0) {
+            r = g = b = l;
+        } else {
+            const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+            };
+            
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            
+            r = hue2rgb(p, q, h + 1/3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1/3);
+        }
+        
+        return [
+            Math.round(r * 255),
+            Math.round(g * 255),
+            Math.round(b * 255)
+        ];
     }
 
-    // Update Kelvin display
-    function updateKelvinDisplay(percent) {
-        const kelvin = percentageToKelvin(percent);
-        kelvinDisplay.textContent = `${kelvin}K`;
+    // Convert hue to RGB color for the light
+    function hueToRgbColor(hue) {
+        const [r, g, b] = hslToRgb(hue, 100, 50);
+        return { r, g, b };
+    }
+
+    // Convert RGB to approximate hue
+    function rgbToHue(r, g, b) {
+        r /= 255;
+        g /= 255;
+        b /= 255;
+        
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        let h;
+        
+        if (max === min) {
+            h = 0; // achromatic
+        } else {
+            const d = max - min;
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+        
+        return Math.round(h * 360);
     }
 
     // Connect to WebSocket
@@ -431,7 +458,7 @@ function makeTest21Draggable(btn) {
 
         ws.onmessage = (e) => {
             const data = JSON.parse(e.data);
-            console.log("Message:", data.type);
+            console.log("Message received:", data);
 
             if (data.type === "auth_ok") {
                 console.log("Authentication successful");
@@ -444,22 +471,15 @@ function makeTest21Draggable(btn) {
                         id: 1,
                         type: "get_states"
                     }));
-
-                    // Subscribe to changes
-                    setTimeout(() => {
-                        ws.send(JSON.stringify({
-                            id: 2,
-                            type: "subscribe_events",
-                            event_type: "state_changed"
-                        }));
-                    }, 100);
                 }, 100);
             }
             else if (data.type === "result" && data.id === 1) {
                 if (data.success && data.result) {
                     const light = data.result.find(e => e.entity_id === LIGHT);
                     if (light) {
+                        console.log("Light state found:", light);
                         isOn = light.state === "on";
+                        
                         // Get brightness from attributes if available
                         if (light.attributes && light.attributes.brightness) {
                             // HA brightness is 0-255, convert to percentage
@@ -469,31 +489,54 @@ function makeTest21Draggable(btn) {
                             currentBrightness = 0;
                         }
 
-                        // Get color temperature if available
-                        if (light.attributes && light.attributes.color_temp) {
-                            // Convert mireds to percentage (153-500 mireds range)
-                            const minMireds = 153;  // 6500K
-                            const maxMireds = 500;  // 2000K
-                            const mireds = light.attributes.color_temp;
-                            // Convert to percentage (0-100)
-                            currentTemperature = Math.round(((mireds - minMireds) / (maxMireds - minMireds)) * 100);
+                        // Get color information if available
+                        if (light.attributes) {
+                            // Try different color attributes
+                            if (light.attributes.hs_color) {
+                                // HS Color format: [hue (0-360), saturation (0-100)]
+                                currentHue = Math.round(light.attributes.hs_color[0]);
+                                console.log("Found HS color:", light.attributes.hs_color);
+                            } else if (light.attributes.rgb_color) {
+                                // RGB Color format: [r, g, b]
+                                const [r, g, b] = light.attributes.rgb_color;
+                                // Convert RGB to approximate hue
+                                currentHue = rgbToHue(r, g, b);
+                                console.log("Found RGB color:", light.attributes.rgb_color);
+                            } else if (light.attributes.xy_color) {
+                                // XY color format
+                                console.log("Found XY color:", light.attributes.xy_color);
+                                // Default to cyan if XY color
+                                currentHue = 180;
+                            } else {
+                                currentHue = 180; // Default cyan color
+                            }
                         } else {
-                            currentTemperature = 50;
+                            currentHue = 180; // Default cyan color
                         }
 
+                        // Update UI elements
                         brightnessSlider.value = currentBrightness;
-                        temperatureSlider.value = currentTemperature;
+                        rgbSlider.value = currentHue;
                         brightnessValue.textContent = `${currentBrightness}%`;
                         
-                        // Update Kelvin display
-                        updateKelvinDisplay(currentTemperature);
-
                         updateUI();
+
+                        // Subscribe to changes after getting initial state
+                        setTimeout(() => {
+                            ws.send(JSON.stringify({
+                                id: 2,
+                                type: "subscribe_events",
+                                event_type: "state_changed"
+                            }));
+                        }, 100);
+                    } else {
+                        console.log("Light not found in states:", LIGHT);
                     }
                 }
             }
             else if (data.type === "event" && data.event?.event_type === "state_changed") {
                 if (data.event.data.entity_id === LIGHT) {
+                    console.log("Light state changed:", data.event.data.new_state);
                     isOn = data.event.data.new_state.state === "on";
                     // Update brightness if available
                     if (data.event.data.new_state.attributes && data.event.data.new_state.attributes.brightness) {
@@ -501,15 +544,16 @@ function makeTest21Draggable(btn) {
                         brightnessSlider.value = currentBrightness;
                         brightnessValue.textContent = `${currentBrightness}%`;
                     }
-                    // Update temperature if available
-                    if (data.event.data.new_state.attributes && data.event.data.new_state.attributes.color_temp) {
-                        const minMireds = 153;
-                        const maxMireds = 500;
-                        const mireds = data.event.data.new_state.attributes.color_temp;
-                        currentTemperature = Math.round(((mireds - minMireds) / (maxMireds - minMireds)) * 100);
-                        temperatureSlider.value = currentTemperature;
-                        // Update Kelvin display
-                        updateKelvinDisplay(currentTemperature);
+                    // Update color if available
+                    if (data.event.data.new_state.attributes) {
+                        if (data.event.data.new_state.attributes.hs_color) {
+                            currentHue = Math.round(data.event.data.new_state.attributes.hs_color[0]);
+                            rgbSlider.value = currentHue;
+                        } else if (data.event.data.new_state.attributes.rgb_color) {
+                            const [r, g, b] = data.event.data.new_state.attributes.rgb_color;
+                            currentHue = rgbToHue(r, g, b);
+                            rgbSlider.value = currentHue;
+                        }
                     }
                     updateUI();
                 }
@@ -536,8 +580,25 @@ function makeTest21Draggable(btn) {
             return;
         }
 
-        // Open brightness modal instead of toggling immediately
-        openBrightnessModal();
+        if (!isOn) {
+            // Turn on the light with current settings
+            ws.send(JSON.stringify({
+                id: Date.now(),
+                type: "call_service",
+                domain: "light",
+                service: "turn_on",
+                service_data: {
+                    entity_id: LIGHT,
+                    brightness: Math.round((currentBrightness / 100) * 255),
+                    hs_color: [currentHue, 100]
+                }
+            }));
+            isOn = true;
+            updateUI();
+        } else {
+            // Open brightness modal
+            openBrightnessModal();
+        }
     }
 
     // Open brightness modal
@@ -560,15 +621,22 @@ function makeTest21Draggable(btn) {
         // Convert percentage to HA brightness value (0-255)
         const haBrightness = Math.round((brightness / 100) * 255);
 
+        const serviceData = {
+            entity_id: LIGHT,
+            brightness: haBrightness
+        };
+
+        // Also include color if we have one
+        if (currentHue !== null) {
+            serviceData.hs_color = [currentHue, 100];
+        }
+
         ws.send(JSON.stringify({
             id: Date.now(),
             type: "call_service",
             domain: "light",
             service: "turn_on",
-            service_data: {
-                entity_id: LIGHT,
-                brightness: haBrightness
-            }
+            service_data: serviceData
         }));
 
         console.log(`Brightness updated to ${brightness}% (${haBrightness})`);
@@ -580,31 +648,32 @@ function makeTest21Draggable(btn) {
         }
     }
 
-    // Update temperature via WebSocket
-    function updateTemperature(temperaturePercent) {
+    // Update color via WebSocket using HS color format
+    function updateColor(hue) {
         if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
-            console.log("Not ready to update temperature");
+            console.log("Not ready to update color");
             return;
         }
 
-        // Convert percentage to mireds (153-500 range)
-        // 0% = 6500K (153 mireds), 100% = 2000K (500 mireds)
-        const minMireds = 153;
-        const maxMireds = 500;
-        const mireds = Math.round(minMireds + (maxMireds - minMireds) * (temperaturePercent / 100));
+        const serviceData = {
+            entity_id: LIGHT,
+            hs_color: [hue, 100] // Hue and full saturation
+        };
+
+        // Also include current brightness
+        if (currentBrightness > 0) {
+            serviceData.brightness = Math.round((currentBrightness / 100) * 255);
+        }
 
         ws.send(JSON.stringify({
             id: Date.now(),
             type: "call_service",
             domain: "light",
             service: "turn_on",
-            service_data: {
-                entity_id: LIGHT,
-                color_temp: mireds
-            }
+            service_data: serviceData
         }));
 
-        console.log(`Temperature updated to ${temperaturePercent}% (${mireds} mireds)`);
+        console.log(`Color updated to hue: ${hue}°`);
 
         // Update UI if light is off
         if (!isOn) {
@@ -651,19 +720,16 @@ function makeTest21Draggable(btn) {
         updateBrightness(currentBrightness);
     });
 
-    // Update temperature value display while dragging (UI only)
-    temperatureSlider.addEventListener('input', (e) => {
-        currentTemperature = parseInt(e.target.value);
-        // Update Kelvin display in real-time
-        updateKelvinDisplay(currentTemperature);
+    // Update color while dragging (UI only)
+    rgbSlider.addEventListener('input', (e) => {
+        currentHue = parseInt(e.target.value);
+        // Just update the slider value, no display updates needed
     });
 
-    // Update temperature only when slider is released
-    temperatureSlider.addEventListener('change', (e) => {
-        currentTemperature = parseInt(e.target.value);
-        // Update Kelvin display
-        updateKelvinDisplay(currentTemperature);
-        updateTemperature(currentTemperature);
+    // Update color only when slider is released
+    rgbSlider.addEventListener('change', (e) => {
+        currentHue = parseInt(e.target.value);
+        updateColor(currentHue);
     });
 
     // Start connection
@@ -678,12 +744,6 @@ function makeTest21Draggable(btn) {
 
     // Make button draggable
     makeTest21Draggable(toggleBtn);
-    
-    // Initialize Kelvin display
-    window.addEventListener('load', () => {
-        updateKelvinDisplay(currentTemperature);
-    });
 </script>
 </body>
-
 </html>

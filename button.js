@@ -56,6 +56,7 @@ window.buttons = (function () {
             deleteButton,
             updateButtonPositions
         };
+
     }
 
     // Load from localStorage
@@ -71,17 +72,9 @@ window.buttons = (function () {
                 lightButtons = [];
             }
         } else {
-            // Default button if nothing saved
-            lightButtons = [{
-                id: 'light1',
-                entityId: 'light.row_1_2',
-                name: 'Bed Light',
-                position: { x: 0.3, y: 0.5 },
-                iconClass: 'fa-lightbulb',
-                type: 'toggle'
-            }];
-            restoreButtons();
+            lightButtons = [];   // NO DEFAULT BUTTONS
         }
+
     }
 
     // Save to localStorage
@@ -172,51 +165,84 @@ window.buttons = (function () {
     }
 
     // Update button configuration
-    function updateButtonConfig(buttonId, newConfig) {
-        const index = lightButtons.findIndex(b => b.id === buttonId);
-        if (index !== -1) {
-            const oldEntityId = lightButtons[index].entityId;
-            lightButtons[index] = { ...lightButtons[index], ...newConfig };
+function updateButtonConfig(buttonId, newConfig) {
+    const index = lightButtons.findIndex(b => b.id === buttonId);
+    if (index === -1) return false;
 
-            // If entityId changed, update EntityButtons registry
-            if (newConfig.entityId && newConfig.entityId !== oldEntityId) {
-                // Remove from old entity group
-                if (oldEntityId && window.EntityButtons && window.EntityButtons[oldEntityId]) {
-                    const btnIndex = window.EntityButtons[oldEntityId].findIndex(btn => btn.id === buttonId);
-                    if (btnIndex > -1) {
-                        window.EntityButtons[oldEntityId].splice(btnIndex, 1);
-                    }
-                }
-                
-                // Add to new entity group
-                if (!window.EntityButtons[newConfig.entityId]) {
-                    window.EntityButtons[newConfig.entityId] = [];
-                }
-            }
+    const buttonData = lightButtons[index];
+    const oldEntityId = buttonData.entityId;
 
-            // Update DOM
-            const btn = document.getElementById(buttonId);
-            if (btn) {
-                const icon = btn.querySelector('.icon');
-                if (icon && newConfig.iconClass) {
-                    icon.className = 'icon fas ' + newConfig.iconClass;
-                }
-                // Update entityId in dataset
-                btn.dataset.entityId = newConfig.entityId || '';
-            }
+    // ✅ Update stored data
+    Object.assign(buttonData, newConfig);
 
-            saveToLocalStorage();
-            return true;
-        }
-        return false;
+    const btn = document.getElementById(buttonId);
+    if (!btn) return false;
+
+    /* ---------- ICON UPDATE ---------- */
+    if (newConfig.iconClass) {
+        const icon = btn.querySelector('.icon');
+        icon.className = `icon fas ${newConfig.iconClass}`;
     }
+
+    /* ---------- NAME UPDATE ---------- */
+    if (newConfig.name) {
+        btn.dataset.name = newConfig.name;
+        btn.title = newConfig.name; // tooltip
+    }
+
+    /* ---------- ENTITY UPDATE (CRITICAL FIX) ---------- */
+    if (newConfig.entityId && newConfig.entityId !== oldEntityId) {
+
+        // Remove from old entity group
+        if (oldEntityId && window.EntityButtons?.[oldEntityId]) {
+            window.EntityButtons[oldEntityId] =
+                window.EntityButtons[oldEntityId].filter(b => b.id !== buttonId);
+        }
+
+        // Add to new entity group
+        if (!window.EntityButtons) window.EntityButtons = {};
+        if (!window.EntityButtons[newConfig.entityId]) {
+            window.EntityButtons[newConfig.entityId] = [];
+        }
+
+        const entityButton = {
+            id: buttonId,
+            entityId: newConfig.entityId,
+            isOn: false,
+            updateUI() {
+                const el = document.getElementById(this.id);
+                if (!el) return;
+                el.classList.toggle('on', this.isOn);
+            },
+            handleStateUpdate(state) {
+                this.isOn = state === 'on';
+                this.updateUI();
+            }
+        };
+
+        window.EntityButtons[newConfig.entityId].push(entityButton);
+
+        // Update DOM dataset
+        btn.dataset.entityId = newConfig.entityId;
+    }
+
+    saveToLocalStorage();
+
+    // Refresh HA state
+    if (window.ws?.readyState === WebSocket.OPEN) {
+        window.ws.send(JSON.stringify({ id: Date.now(), type: "get_states" }));
+    }
+
+    return true;
+}
+
 
     // Delete a button
     function deleteButton(buttonId) {
         const index = lightButtons.findIndex(b => b.id === buttonId);
         if (index !== -1) {
             const button = lightButtons[index];
-            
+
             // Remove from EntityButtons registry
             if (button.entityId && window.EntityButtons && window.EntityButtons[button.entityId]) {
                 const btnIndex = window.EntityButtons[button.entityId].findIndex(btn => btn.id === buttonId);
@@ -224,7 +250,7 @@ window.buttons = (function () {
                     window.EntityButtons[button.entityId].splice(btnIndex, 1);
                 }
             }
-            
+
             lightButtons.splice(index, 1);
             const btn = document.getElementById(buttonId);
             if (btn) {
@@ -289,9 +315,12 @@ window.buttons = (function () {
         button.addEventListener('click', (e) => {
             if (!isEditMode && callbacks.toggleLight) {
                 e.stopPropagation();
-                callbacks.toggleLight(config.entityId, config.id);
+
+                const currentEntity = button.dataset.entityId; // ✅ always latest
+                callbacks.toggleLight(currentEntity, config.id);
             }
         });
+
 
         // Mouse/touch down for drag and long press
         button.addEventListener('mousedown', (e) => startButtonInteraction(e, button, config));
@@ -331,11 +360,11 @@ window.buttons = (function () {
             // Only show edit modal if we haven't moved much
             const movedX = Math.abs(clientX - dragStart.x);
             const movedY = Math.abs(clientY - dragStart.y);
-            
+
             if (movedX < dragThreshold && movedY < dragThreshold && !isDraggingButton) {
                 showEditModal(config);
             }
-            
+
             longPressTimer = null;
         }, 600); // 600ms for long press
 
@@ -343,16 +372,16 @@ window.buttons = (function () {
         const mouseMoveHandler = (moveEvent) => {
             const moveClientX = moveEvent.type.includes('touch') ? moveEvent.touches[0].clientX : moveEvent.clientX;
             const moveClientY = moveEvent.type.includes('touch') ? moveEvent.touches[0].clientY : moveEvent.clientY;
-            
+
             const deltaX = Math.abs(moveClientX - dragStart.x);
             const deltaY = Math.abs(moveClientY - dragStart.y);
-            
+
             // If movement exceeds threshold, start dragging
             if ((deltaX > dragThreshold || deltaY > dragThreshold) && longPressTimer) {
                 clearTimeout(longPressTimer);
                 longPressTimer = null;
                 startButtonDrag(moveEvent, button, config);
-                
+
                 // Remove this listener
                 document.removeEventListener('mousemove', mouseMoveHandler);
                 document.removeEventListener('touchmove', mouseMoveHandler);
@@ -389,13 +418,13 @@ window.buttons = (function () {
         // Add global event listeners for dragging
         document.addEventListener('mousemove', doButtonDrag);
         document.addEventListener('touchmove', doButtonDrag, { passive: false });
-        
+
         const stopDrag = () => {
             stopButtonDrag();
             document.removeEventListener('mouseup', stopDrag);
             document.removeEventListener('touchend', stopDrag);
         };
-        
+
         document.addEventListener('mouseup', stopDrag);
         document.addEventListener('touchend', stopDrag);
     }
@@ -452,16 +481,19 @@ window.buttons = (function () {
         // Remove global event listeners
         document.removeEventListener('mousemove', doButtonDrag);
         document.removeEventListener('touchmove', doButtonDrag);
-        
+
         // Save position
         saveToLocalStorage();
     }
 
     // Show edit modal
+    // Show edit modal
     function showEditModal(config) {
         editingButtonId = config.id;
+        // Set the editing button ID so it's accessible to the modal
+        window.buttons.setEditingButtonId(config.id);
 
-        // Fill form
+        // Fill form with current values
         document.getElementById('editEntityId').value = config.entityId || '';
         document.getElementById('editName').value = config.name || '';
         document.getElementById('editIcon').value = config.iconClass || 'fa-lightbulb';
@@ -546,7 +578,7 @@ window.buttons = (function () {
 
                     // Check if this is a dimmer button
                     const isDimmer = lightButtons.find(b => b.id === editingButtonId)?.type === 'dimmer';
-                    
+
                     if (isDimmer && window.DimmerModule && DimmerModule.updateConfig) {
                         // Update dimmer via DimmerModule
                         DimmerModule.updateConfig(editingButtonId, newConfig);
@@ -566,14 +598,14 @@ window.buttons = (function () {
             if (editingButtonId && confirm('Are you sure you want to delete this button?')) {
                 // Check if this is a dimmer button
                 const isDimmer = lightButtons.find(b => b.id === editingButtonId)?.type === 'dimmer';
-                
+
                 let deleted = false;
                 if (isDimmer && window.DimmerModule && DimmerModule.deleteButton) {
                     deleted = DimmerModule.deleteButton(editingButtonId);
                 } else {
                     deleted = deleteButton(editingButtonId);
                 }
-                
+
                 if (deleted) {
                     document.getElementById('buttonEditModal').style.display = 'none';
                     editingButtonId = null;
@@ -612,6 +644,11 @@ window.buttons = (function () {
         getButtons,
         updateButtonConfig,
         deleteButton,
-        updateButtonPositions
+        updateButtonPositions,
+
+        // NEW PUBLIC ACCESSORS
+        setEditingButtonId: (id) => { editingButtonId = id; },
+        getEditingButtonId: () => editingButtonId
     };
+
 })();

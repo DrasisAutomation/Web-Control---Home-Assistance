@@ -1,4 +1,4 @@
-// main.js - Updated with dimmer support
+// main.js - Updated with localStorage persistence and clear functionality
 document.addEventListener("DOMContentLoaded", () => {
     // DOM Elements
     const container = document.getElementById("container");
@@ -8,11 +8,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const editBtn = document.getElementById("editBtn");
     const saveBtn = document.getElementById("saveBtn");
     const loadBtn = document.getElementById("loadBtn");
+    const clearAllBtn = document.getElementById("clearAllBtn");
     const imageBtn = document.getElementById("imageBtn");
     const addBtn = document.getElementById("addBtn");
     const editControls = document.getElementById("editControls");
     const imageFileInput = document.getElementById("imageFileInput");
     const loadFileInput = document.getElementById("loadFileInput");
+
+    // Storage constants
+    const STORAGE_KEY = 'floorplan_design_v1.1';
+    const DEFAULT_LOAD_FILE = 'load.json'; // Default file to load
 
     // Zoom and Pan variables
     let scale = 1;
@@ -93,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function startPan(e) {
         // Don't start panning if clicking on a button
         if (e.target.closest('.light-button')) return;
-        
+
         isDragging = true;
         container.classList.add('grabbing');
 
@@ -210,11 +215,11 @@ document.addEventListener("DOMContentLoaded", () => {
         updateFooter(`Brightness set to ${brightness}%`);
     }
 
-    // Save design to JSON file - UPDATED
+    // Save design to localStorage and JSON file
     function saveDesign() {
         const buttonData = buttons.save();
         const dimmerData = window.DimmerModule ? DimmerModule.getDimmerButtons() : [];
-        
+
         const designData = {
             meta: {
                 savedAt: new Date().toISOString(),
@@ -227,7 +232,15 @@ document.addEventListener("DOMContentLoaded", () => {
             transform: buttonData.transform || {}
         };
 
-        // Create blob and download
+        // Save to localStorage
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(designData));
+            console.log('Design saved to localStorage');
+        } catch (error) {
+            console.error('Failed to save to localStorage:', error);
+        }
+
+        // Create blob and download JSON file
         const blob = new Blob([JSON.stringify(designData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
 
@@ -244,73 +257,21 @@ document.addEventListener("DOMContentLoaded", () => {
         updateFooter('Design saved!');
     }
 
-    // Load design from JSON file - UPDATED
+    // Load design from JSON file
     function loadDesign(file) {
         const reader = new FileReader();
 
         reader.onload = function (e) {
             try {
                 const designData = JSON.parse(e.target.result);
+                applyDesign(designData);
 
-                // Helper: load data + update HA states
-                function finishLoading() {
-                    // Load regular buttons
-                    if (designData.buttons) {
-                        buttons.load(designData);
-                    }
-                    
-                    // Load dimmers
-                    if (designData.dimmers && window.DimmerModule) {
-                        // Clear existing dimmers first
-                        const currentDimmers = DimmerModule.getDimmerButtons();
-                        if (currentDimmers && currentDimmers.length > 0) {
-                            currentDimmers.forEach(dimmer => {
-                                DimmerModule.deleteButton(dimmer.id);
-                            });
-                        }
-                        
-                        // Load new dimmers
-                        designData.dimmers.forEach(dimmerConfig => {
-                            DimmerModule.create(dimmerConfig);
-                        });
-                    }
-
-                    initImage();
-
-                    // Request updated HA light states
-                    if (ready && ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({
-                            id: Date.now(),
-                            type: "get_states"
-                        }));
-                    }
-
-                    updateFooter("Design loaded!");
-                }
-
-                // Image handling
-                if (designData.image) {
-                    if (designData.image.startsWith('data:')) {
-                        img.onload = finishLoading;
-                        img.src = designData.image;
-                    } else {
-                        if (confirm("Image not included — please upload the floorplan image now.")) {
-                            imageFileInput.onchange = function () {
-                                const imageFile = imageFileInput.files[0];
-                                const imageReader = new FileReader();
-                                imageReader.onload = function (ev) {
-                                    img.onload = finishLoading;
-                                    img.src = ev.target.result;
-                                };
-                                imageReader.readAsDataURL(imageFile);
-                            };
-                            imageFileInput.click();
-                            return;
-                        }
-                    }
-                } else {
-                    img.onload = finishLoading;
-                    img.src = img.src;
+                // Save to localStorage when loading from file
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(designData));
+                    console.log('Design saved to localStorage');
+                } catch (error) {
+                    console.error('Failed to save to localStorage:', error);
                 }
 
             } catch (error) {
@@ -322,11 +283,200 @@ document.addEventListener("DOMContentLoaded", () => {
         reader.readAsText(file);
     }
 
+    // Load design from URL (load.json)
+    async function loadDesignFromURL(url) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to load ${url}: ${response.status}`);
+            }
+
+            const designData = await response.json();
+            console.log(`Design loaded from ${url}`);
+            applyDesign(designData);
+
+            // Save to localStorage when loading from URL
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(designData));
+                console.log('Design saved to localStorage');
+            } catch (error) {
+                console.error('Failed to save to localStorage:', error);
+            }
+
+        } catch (error) {
+            console.error(`Error loading design from ${url}:`, error);
+            // Don't show alert for default file - it's optional
+            if (url !== DEFAULT_LOAD_FILE) {
+                alert(`Error loading design from ${url}. Please check if the file exists and is valid JSON.`);
+            }
+        }
+    }
+
+    // Apply design data to the interface
+    function applyDesign(designData) {
+        // Helper: load data + update HA states
+        function finishLoading() {
+            // Clear existing buttons and dimmers
+            clearAllButtons();
+
+            // Load regular buttons
+            if (designData.buttons) {
+                buttons.load(designData);
+            }
+
+            // Load dimmers
+            if (designData.dimmers && window.DimmerModule) {
+                designData.dimmers.forEach(dimmerConfig => {
+                    DimmerModule.create(dimmerConfig);
+                });
+            }
+
+            // Apply transform if available
+            if (designData.transform) {
+                scale = designData.transform.scale || scale;
+                posX = designData.transform.posX || posX;
+                posY = designData.transform.posY || posY;
+                applyTransform();
+            } else {
+                initImage();
+            }
+
+            // Request updated HA light states
+            if (ready && ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    id: Date.now(),
+                    type: "get_states"
+                }));
+            }
+
+            updateFooter("Design loaded!");
+        }
+
+        // Image handling
+        if (designData.image) {
+            if (designData.image.startsWith('data:')) {
+                img.onload = finishLoading;
+                img.src = designData.image;
+            } else {
+                if (confirm("Image not included — please upload the floorplan image now.")) {
+                    imageFileInput.onchange = function () {
+                        const imageFile = imageFileInput.files[0];
+                        const imageReader = new FileReader();
+                        imageReader.onload = function (ev) {
+                            img.onload = finishLoading;
+                            img.src = ev.target.result;
+                        };
+                        imageReader.readAsDataURL(imageFile);
+                    };
+                    imageFileInput.click();
+                    return;
+                }
+            }
+        } else {
+            img.onload = finishLoading;
+            img.src = img.src;
+        }
+    }
+
+    // Clear all buttons, dimmers, and localStorage
+    function clearAll() {
+        if (!confirm("Are you sure you want to clear all buttons, dimmers, and reset the design? This action cannot be undone.")) {
+            return;
+        }
+
+        // Clear all buttons from buttons module
+        buttons.getButtons().forEach(button => {
+            buttons.deleteButton(button.id);
+        });
+
+        // Clear all dimmers
+        if (window.DimmerModule && DimmerModule.getDimmerButtons) {
+            DimmerModule.getDimmerButtons().forEach(dimmer => {
+                DimmerModule.deleteButton(dimmer.id);
+            });
+        }
+
+        // Clear localStorage
+        localStorage.removeItem(STORAGE_KEY);
+
+        // Reset image to default
+        img.src = 'image.png';
+
+        // Reset transform
+        initImage();
+
+        updateFooter('All cleared!');
+    }
+
+    // Clear all buttons and dimmers (without confirmation, used internally)
+    function clearAllButtons() {
+        // Clear all buttons from buttons module
+        const allButtons = buttons.getButtons();
+        allButtons.forEach(button => {
+            buttons.deleteButton(button.id);
+        });
+
+        // Clear all dimmers
+        if (window.DimmerModule && DimmerModule.getDimmerButtons) {
+            const allDimmers = DimmerModule.getDimmerButtons();
+            allDimmers.forEach(dimmer => {
+                DimmerModule.deleteButton(dimmer.id);
+            });
+        }
+    }
+
+    // Load design from localStorage on page load
+    function loadFromStorage() {
+        try {
+            const storedData = localStorage.getItem(STORAGE_KEY);
+            if (storedData) {
+                const designData = JSON.parse(storedData);
+                console.log('Loading design from localStorage');
+                applyDesign(designData);
+                return true;
+            }
+        } catch (error) {
+            console.error('Failed to load from localStorage:', error);
+            localStorage.removeItem(STORAGE_KEY); // Clear corrupted data
+        }
+        return false;
+    }
+
     // Update footer text
     function updateFooter(text) {
         const footer = document.querySelector('.footer');
         footer.innerHTML = `${text} <button class="footer-control load-btn" id="loadBtn">📂 Load</button>`;
-        document.getElementById('loadBtn').addEventListener('click', () => loadFileInput.click());
+
+        // Update the load button event listener
+        const newLoadBtn = document.getElementById('loadBtn');
+        if (newLoadBtn) {
+            newLoadBtn.addEventListener('click', () => {
+                // Load from DEFAULT_LOAD_FILE when clicked
+                loadDesignFromURL(DEFAULT_LOAD_FILE);
+            });
+        }
+    }
+
+    // Show notification
+    function showNotification(message, type = 'info') {
+        // Remove existing notification
+        const existing = document.querySelector('.notification-indicator');
+        if (existing) existing.remove();
+
+        const notification = document.createElement('div');
+        notification.className = `notification-indicator`;
+        notification.style.background = type === 'error' ? '#ff4757' :
+            type === 'success' ? '#2ed573' :
+                '#3742fa';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        // Auto-remove after animation
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 2000);
     }
 
     // Set up event listeners
@@ -364,7 +514,7 @@ document.addEventListener("DOMContentLoaded", () => {
             initImage();
         });
 
-        // Edit mode toggle - UPDATED
+        // Edit mode toggle
         editBtn.addEventListener('click', () => {
             isEditMode = !isEditMode;
 
@@ -396,13 +546,20 @@ document.addEventListener("DOMContentLoaded", () => {
         // Save button
         saveBtn.addEventListener('click', saveDesign);
 
-        // Load button
-        loadBtn.addEventListener('click', () => loadFileInput.click());
+        // Load button - CHANGED: Now loads DEFAULT_LOAD_FILE directly
+        loadBtn.addEventListener('click', () => {
+            loadDesignFromURL(DEFAULT_LOAD_FILE);
+        });
+
+        // Keep the file input for manual loading if needed
         loadFileInput.addEventListener('change', (e) => {
             if (e.target.files[0]) {
                 loadDesign(e.target.files[0]);
             }
         });
+
+        // Clear All button
+        clearAllBtn.addEventListener('click', clearAll);
 
         // Image button (edit mode)
         imageBtn.addEventListener('click', () => imageFileInput.click());
@@ -422,6 +579,61 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById('buttonPickerModal').style.display = 'flex';
         });
     }
+    // --- FIX EDIT MODAL UPDATE ---
+    document.getElementById("buttonEditForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const entityId = document.getElementById("editEntityId").value.trim();
+        const name = document.getElementById("editName").value.trim();
+        const icon = document.getElementById("editIcon").value;
+
+        const btnId = buttons.getEditingButtonId();  // Use the getter function
+
+        if (!btnId) {
+            alert("No button selected.");
+            return;
+        }
+
+        if (!entityId) {
+            alert("Entity ID is required.");
+            return;
+        }
+
+        // Update the button configuration
+        buttons.updateButtonConfig(btnId, {
+            entityId: entityId,
+            name: name || 'Button',
+            iconClass: icon
+        });
+
+        // Close modal
+        document.getElementById("buttonEditModal").style.display = "none";
+
+        // Clear the editing button ID
+        buttons.setEditingButtonId(null);
+    });
+
+    // Button edit modal close
+    document.getElementById('closeEditBtn')?.addEventListener('click', () => {
+        document.getElementById('buttonEditModal').style.display = 'none';
+        editingButtonId = null;
+        if (window.buttons) {
+            window.buttons.setEditingButtonId(null);
+        }
+    });
+
+    // Close on overlay click - also clear editing button ID
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.style.display = 'none';
+                editingButtonId = null;
+                if (window.buttons) {
+                    window.buttons.setEditingButtonId(null);
+                }
+            }
+        });
+    });
 
     // WebSocket Functions
     function connectWebSocket() {
@@ -464,7 +676,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const st = states.find(s => s.entity_id === light.entityId);
                     if (st) {
                         updateLightUI(light.id, st.state === "on");
-                        
+
                         // Also update dimmer if it's a dimmer button
                         if (light.type === 'dimmer') {
                             const brightness = st.attributes?.brightness;
@@ -473,7 +685,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                 const brightnessPercent = Math.round((brightness / 255) * 100);
                                 if (window.DimmerModule && DimmerModule.handleStateUpdate) {
                                     DimmerModule.handleStateUpdate(
-                                        light.entityId, 
+                                        light.entityId,
                                         st.state,
                                         brightnessPercent
                                     );
@@ -502,12 +714,12 @@ document.addEventListener("DOMContentLoaded", () => {
             else if (data.type === "event" && data.event?.event_type === "state_changed") {
                 const entityId = data.event.data.entity_id;
                 const newState = data.event.data.new_state;
-                
+
                 // Update regular buttons
                 const allLights = buttons.getButtons().filter(l => l.entityId === entityId);
                 allLights.forEach(light => {
                     updateLightUI(light.id, newState.state === "on");
-                    
+
                     // Update dimmer if applicable
                     if (light.type === 'dimmer') {
                         const brightness = newState.attributes?.brightness;
@@ -541,7 +753,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const btn = document.getElementById(light.id);
                 if (btn) btn.disabled = true;
             });
-            
+
             // Disable dimmer buttons too
             if (window.DimmerModule && DimmerModule.getDimmerButtons) {
                 DimmerModule.getDimmerButtons().forEach(dimmer => {
@@ -557,7 +769,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const btn = document.getElementById(light.id);
                 if (btn) btn.disabled = true;
             });
-            
+
             // Disable dimmer buttons too
             if (window.DimmerModule && DimmerModule.getDimmerButtons) {
                 DimmerModule.getDimmerButtons().forEach(dimmer => {
@@ -565,7 +777,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (btn) btn.disabled = true;
                 });
             }
-            
+
             ready = false;
             setTimeout(connectWebSocket, 3000);
         };
@@ -577,7 +789,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isEditMode) {
             return;
         }
-        
+
         if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
             console.log("Not ready to toggle");
             return;
@@ -588,7 +800,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const btn = document.getElementById(buttonId);
         const isOn = btn.classList.contains('on');
-        
+
         // For dimmers, ALWAYS open dimmer modal when clicked
         if (light.type === 'dimmer') {
             // Open dimmer modal
@@ -658,6 +870,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
         initImage();
         setupEventListeners();
+
+        // Load priority:
+        // 1. Try to load from localStorage first (user's saved state)
+        // 2. If nothing in localStorage, automatically load from DEFAULT_LOAD_FILE
+        if (!loadFromStorage()) {
+            console.log('No localStorage found, loading default design from load.json...');
+            showNotification('Loading default design...', 'info');
+
+            // Automatically load from default load.json file
+            loadDesignFromURL(DEFAULT_LOAD_FILE).then(() => {
+                console.log('Default design loaded from load.json');
+            }).catch((error) => {
+                console.log('No load.json found, starting with default image');
+                // If load.json doesn't exist, just use default image
+                img.src = 'image.png';
+                updateFooter('Ready');
+            });
+        }
+
         connectWebSocket();
     }
 
