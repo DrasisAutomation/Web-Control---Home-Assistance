@@ -1,6 +1,6 @@
 {
   "meta": {
-    "savedAt": "2025-12-16T11:59:52.636Z",
+    "savedAt": "2025-12-17T11:32:29.521Z",
     "version": "1.1",
     "hasDimmers": true
   },
@@ -8,13 +8,14 @@
   "buttons": [
     {
       "id": "light1",
-      "entityId": "light.row_1_2",
+      "entityId": "switch.node_89",
       "name": "Bed Light",
       "position": {
         "x": 0.2685236814304523,
         "y": 0.16034811505565852
       },
-      "brightness": 50
+      "brightness": 50,
+      "iconClass": "fa-lightbulb"
     },
     {
       "id": "light2",
@@ -74,6 +75,45 @@
     }
   ],
   "dimmers": [
+    {
+      "entityId": "light.pantry_cct_lighr_exp_room_entrance_light",
+      "name": "Dimmer",
+      "position": {
+        "x": 0.919391562374901,
+        "y": 0.5689036555532869
+      },
+      "iconClass": "fa-sliders-h",
+      "brightness": 100,
+      "isOn": true,
+      "id": "dimmer_1765448573888_17z7xtgkx",
+      "type": "dimmer"
+    },
+    {
+      "entityId": "light.pantry_cct_lighr_exp_room_entrance_light",
+      "name": "Dimmer",
+      "position": {
+        "x": 0.919391562374901,
+        "y": 0.5689036555532869
+      },
+      "iconClass": "fa-sliders-h",
+      "brightness": 100,
+      "isOn": true,
+      "id": "dimmer_1765448573888_17z7xtgkx",
+      "type": "dimmer"
+    },
+    {
+      "entityId": "light.pantry_cct_lighr_exp_room_entrance_light",
+      "name": "Dimmer",
+      "position": {
+        "x": 0.919391562374901,
+        "y": 0.5689036555532869
+      },
+      "iconClass": "fa-sliders-h",
+      "brightness": 100,
+      "isOn": true,
+      "id": "dimmer_1765448573888_17z7xtgkx",
+      "type": "dimmer"
+    },
     {
       "entityId": "light.pantry_cct_lighr_exp_room_entrance_light",
       "name": "Dimmer",

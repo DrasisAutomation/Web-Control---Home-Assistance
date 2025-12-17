@@ -31,6 +31,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let imgNaturalW = 0;
     let imgNaturalH = 0;
 
+    let lastPinchDistance = null;
+    let isPinching = false;
+
     // State variables
     let isEditMode = false;
     let isDragging = false;
@@ -188,31 +191,51 @@ document.addEventListener("DOMContentLoaded", () => {
         applyTransform();
     }
 
-    // Update brightness via WebSocket
+    // Update brightness/percentage for dimmers and fans
     function updateBrightness(entityId, brightness, buttonId) {
         if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
             console.log("Not ready to update brightness");
             return;
         }
 
-        // Convert percentage to HA brightness value (0-255)
-        const haBrightness = Math.round((brightness / 100) * 255);
+        const domain = getDomainFromEntityId(entityId);
 
-        ws.send(JSON.stringify({
-            id: Date.now(),
-            type: "call_service",
-            domain: "light",
-            service: "turn_on",
-            service_data: {
-                entity_id: entityId,
-                brightness: haBrightness
-            }
-        }));
+        if (domain === 'light') {
+            // Convert percentage to HA brightness value (0-255)
+            const haBrightness = Math.round((brightness / 100) * 255);
 
-        console.log(`Brightness updated to ${brightness}% (${haBrightness})`);
+            ws.send(JSON.stringify({
+                id: Date.now(),
+                type: "call_service",
+                domain: "light",
+                service: "turn_on",
+                service_data: {
+                    entity_id: entityId,
+                    brightness: haBrightness
+                }
+            }));
 
-        // Update footer
-        updateFooter(`Brightness set to ${brightness}%`);
+            console.log(`Light brightness updated to ${brightness}% (${haBrightness})`);
+            updateFooter(`Brightness set to ${brightness}%`);
+        }
+        else if (domain === 'fan') {
+            // Convert percentage to fan speed percentage
+            const percentage = Math.round(brightness);
+
+            ws.send(JSON.stringify({
+                id: Date.now(),
+                type: "call_service",
+                domain: "fan",
+                service: "set_percentage",
+                service_data: {
+                    entity_id: entityId,
+                    percentage: percentage
+                }
+            }));
+
+            console.log(`Fan speed set to ${brightness}%`);
+            updateFooter(`Fan speed set to ${brightness}%`);
+        }
     }
 
     // Save design to localStorage and JSON file
@@ -481,6 +504,49 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Set up event listeners
     function setupEventListeners() {
+        container.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                isPinching = true;
+                lastPinchDistance = getDistance(e.touches[0], e.touches[1]);
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        container.addEventListener('touchmove', (e) => {
+            if (!isPinching || e.touches.length !== 2) return;
+
+            const currentDistance = getDistance(e.touches[0], e.touches[1]);
+            const zoomFactor = currentDistance / lastPinchDistance;
+
+            const oldScale = scale;
+            scale *= zoomFactor;
+            scale = Math.min(maxScale, Math.max(minScale, scale));
+
+            // Zoom towards center of pinch
+            const rect = container.getBoundingClientRect();
+            const centerX =
+                (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left - rect.width / 2;
+            const centerY =
+                (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top - rect.height / 2;
+
+            const scaleChange = scale / oldScale;
+            posX = centerX - (centerX - posX) * scaleChange;
+            posY = centerY - (centerY - posY) * scaleChange;
+
+            lastPinchDistance = currentDistance;
+            applyTransform();
+
+            e.preventDefault();
+        }, { passive: false });
+
+        container.addEventListener('touchend', () => {
+            if (isPinching) {
+                isPinching = false;
+                lastPinchDistance = null;
+            }
+        });
+
+
         // Image panning
         container.addEventListener('mousedown', (e) => {
             if (e.target.closest('.light-button')) return;
@@ -672,20 +738,28 @@ document.addEventListener("DOMContentLoaded", () => {
                 const states = data.result;
 
                 // Update regular buttons
-                buttons.getButtons().forEach(light => {
-                    const st = states.find(s => s.entity_id === light.entityId);
+                buttons.getButtons().forEach(button => {
+                    const st = states.find(s => s.entity_id === button.entityId);
                     if (st) {
-                        updateLightUI(light.id, st.state === "on");
+                        updateLightUI(button.id, st.state === "on" || st.state === "open" || st.state === "playing");
 
-                        // Also update dimmer if it's a dimmer button
-                        if (light.type === 'dimmer') {
-                            const brightness = st.attributes?.brightness;
+                        const domain = getDomainFromEntityId(button.entityId);
+
+                        // Handle brightness/percentage for different entity types
+                        if (domain === 'light' || domain === 'fan') {
+                            const brightness = st.attributes?.brightness || st.attributes?.percentage;
                             if (brightness !== undefined) {
-                                // Convert HA brightness (0-255) to percentage
-                                const brightnessPercent = Math.round((brightness / 255) * 100);
+                                // Convert to percentage
+                                let brightnessPercent;
+                                if (domain === 'light') {
+                                    brightnessPercent = Math.round((brightness / 255) * 100);
+                                } else {
+                                    brightnessPercent = brightness; // Already in percentage for fans
+                                }
+
                                 if (window.DimmerModule && DimmerModule.handleStateUpdate) {
                                     DimmerModule.handleStateUpdate(
-                                        light.entityId,
+                                        button.entityId,
                                         st.state,
                                         brightnessPercent
                                     );
@@ -784,6 +858,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Toggle light via WebSocket
+    // main.js - Updated toggleLight function to handle multiple entity types
     function toggleLight(entityId, buttonId) {
         // Don't toggle if we're in edit mode
         if (isEditMode) {
@@ -810,15 +885,57 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Regular toggle buttons
-        const service = isOn ? "turn_off" : "turn_on";
+        // Determine domain and service based on entity ID
+        const domain = getDomainFromEntityId(entityId);
+        let service, serviceData;
+
+        // For switch entities
+        if (domain === 'switch') {
+            service = isOn ? "turn_off" : "turn_on";
+            serviceData = { entity_id: entityId };
+        }
+        // For light entities (including dimmers)
+        else if (domain === 'light') {
+            service = isOn ? "turn_off" : "turn_on";
+            serviceData = { entity_id: entityId };
+        }
+        // For scene entities
+        else if (domain === 'scene') {
+            service = "turn_on";
+            serviceData = { entity_id: entityId };
+        }
+        // For script entities
+        else if (domain === 'script') {
+            service = "turn_on";
+            serviceData = { entity_id: entityId };
+        }
+        // For cover entities (garage doors, blinds)
+        else if (domain === 'cover') {
+            service = isOn ? "close_cover" : "open_cover";
+            serviceData = { entity_id: entityId };
+        }
+        // For input_boolean entities
+        else if (domain === 'input_boolean') {
+            service = isOn ? "turn_off" : "turn_on";
+            serviceData = { entity_id: entityId };
+        }
+        // For fan entities
+        else if (domain === 'fan') {
+            service = isOn ? "turn_off" : "turn_on";
+            serviceData = { entity_id: entityId };
+        }
+        // Default to light domain
+        else {
+            service = isOn ? "turn_off" : "turn_on";
+            serviceData = { entity_id: entityId };
+        }
 
         ws.send(JSON.stringify({
             id: Date.now(),
             type: "call_service",
-            domain: "light",
+            domain: domain,
             service: service,
-            service_data: { entity_id: entityId }
+            service_data: serviceData
         }));
 
         // Update UI optimistically
@@ -828,21 +945,52 @@ document.addEventListener("DOMContentLoaded", () => {
         updateFooter(`${light.name} is ${!isOn ? 'on' : 'off'}`);
     }
 
+    // Helper function to extract domain from entity ID
+    function getDomainFromEntityId(entityId) {
+        if (!entityId) return 'light';
+
+        const parts = entityId.split('.');
+        return parts.length > 0 ? parts[0] : 'light';
+    }
+
     // Update light UI
     function updateLightUI(buttonId, isOn) {
         const btn = document.getElementById(buttonId);
         if (!btn) return;
 
         const icon = btn.querySelector('.icon');
+        const light = buttons.getButtons().find(l => l.id === buttonId);
+
+        if (!light) return;
+
+        // Determine entity type
+        const domain = getDomainFromEntityId(light.entityId);
 
         if (isOn) {
             btn.classList.add('on');
             btn.classList.remove('off');
-            icon.classList.add('fa-solid');
+
+            // Add appropriate icon classes based on domain
+            if (domain === 'cover') {
+                icon.classList.add('fa-door-open');
+            } else if (domain === 'fan') {
+                icon.classList.add('fa-fan');
+            } else {
+                icon.classList.add('fa-solid');
+            }
         } else {
             btn.classList.remove('on');
             btn.classList.add('off');
-            icon.classList.remove('fa-solid');
+
+            // Remove appropriate icon classes
+            if (domain === 'cover') {
+                icon.classList.remove('fa-door-open');
+                icon.classList.add('fa-door-closed');
+            } else if (domain === 'fan') {
+                icon.classList.remove('fa-fan');
+            } else {
+                icon.classList.remove('fa-solid');
+            }
         }
 
         btn.disabled = false;
@@ -907,3 +1055,9 @@ document.addEventListener("keydown", e => {
         e.preventDefault();
     }
 });
+
+function getDistance(t1, t2) {
+    const dx = t2.clientX - t1.clientX;
+    const dy = t2.clientY - t1.clientY;
+    return Math.hypot(dx, dy);
+}
