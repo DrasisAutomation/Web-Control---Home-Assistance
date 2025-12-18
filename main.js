@@ -1,4 +1,4 @@
-// main.js - Updated with working reset button functionality
+// main.js - Updated with working reset button functionality (no double-tap reset)
 document.addEventListener("DOMContentLoaded", () => {
     // DOM Elements
     // 🔴 Block browser pinch zoom (mobile Safari & Chrome)
@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updateButtonPositions();
     }
 
-    // NEW: Enhanced reset view function that actually works
+    // Enhanced reset view function that works reliably
     function resetViewHard() {
         console.log("Resetting view...");
         
@@ -91,48 +91,21 @@ document.addEventListener("DOMContentLoaded", () => {
         // Reset pinch state
         lastPinchDistance = null;
         
-        // METHOD 1: Direct transform reset
+        // Apply reset transform
         pan.style.transform = 'translate(0px, 0px) scale(1)';
         pan.style.transformOrigin = 'center center';
         
-        // METHOD 2: Remove and re-add transform style (for stubborn browsers)
-        setTimeout(() => {
-            // Clear any existing transform
-            pan.style.cssText = pan.style.cssText.replace(/transform[^;]*;?/g, '');
-            pan.style.transform = 'translate(0px, 0px) scale(1)';
-            pan.style.transformOrigin = 'center center';
-            
-            // Force browser to recognize the change
-            pan.offsetHeight; // Trigger reflow
-        }, 10);
+        // Force browser to recognize the change
+        pan.offsetHeight; // Trigger reflow
         
-        // METHOD 3: Use requestAnimationFrame for guaranteed execution
-        requestAnimationFrame(() => {
-            pan.style.transform = 'translate(0px, 0px) scale(1)';
-            pan.style.transformOrigin = 'center center';
-            
-            // Update button positions
-            updateButtonPositions();
-            
-            // Force image to reset its display
-            img.style.height = '80vh';
-            img.style.width = 'auto';
-            
-            // Final check and apply
-            requestAnimationFrame(() => {
-                pan.style.transform = 'translate(0px, 0px) scale(1)';
-                pan.style.transformOrigin = 'center center';
-                
-                // Update everything one more time
-                updateButtonPositions();
-                
-                // Log success
-                console.log("View reset complete");
-            });
-        });
-        
-        // Immediate update
+        // Update button positions
         updateButtonPositions();
+        
+        // Ensure image is at correct size
+        img.style.height = '80vh';
+        img.style.width = 'auto';
+        
+        console.log("View reset complete. Scale:", scale, "PosX:", posX, "PosY:", posY);
     }
 
     // Get image metadata for buttons.js
@@ -531,10 +504,10 @@ document.addEventListener("DOMContentLoaded", () => {
         return false;
     }
 
-    // Update footer text - SIMPLIFIED VERSION
+    // Update footer text
     function updateFooter(text) {
         const footer = document.querySelector('.footer');
-        footer.innerHTML = `${text} <button class="footer-control load-btn" id="loadBtn">📂 Load...</button>`;
+        footer.innerHTML = `${text} <button class="footer-control load-btn" id="loadBtn">📂 Load..</button>`;
 
         // Update the load button event listener
         const newLoadBtn = document.getElementById('loadBtn');
@@ -640,7 +613,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Zoom
         container.addEventListener('wheel', handleZoom, { passive: false });
 
-        // NEW: Enhanced reset button with visual feedback
+        // Enhanced reset button with visual feedback
         resetBtn.addEventListener('click', () => {
             console.log("Reset button clicked");
             
@@ -649,7 +622,7 @@ document.addEventListener("DOMContentLoaded", () => {
             resetBtn.style.background = '#4CAF50';
             resetBtn.style.transform = 'scale(1.1)';
             
-            // Call the enhanced reset function
+            // Call the reset function
             resetViewHard();
             
             // Update footer
@@ -728,7 +701,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById('buttonPickerModal').style.display = 'flex';
         });
 
-        // NEW: Add keyboard shortcut for reset (ESC key)
+        // Keyboard shortcut for reset (ESC key)
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && !isEditMode) {
                 resetViewHard();
@@ -743,34 +716,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 }, 500);
             }
         });
-
-        // NEW: Add double-tap to reset on mobile
-        let lastTapTime = 0;
-        container.addEventListener('touchend', (e) => {
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTapTime;
-            
-            // Double-tap detection (300ms threshold)
-            if (tapLength < 300 && tapLength > 0 && e.touches.length === 0) {
-                e.preventDefault();
-                
-                // Double-tap to reset
-                resetViewHard();
-                updateFooter('View reset (double-tap)');
-                
-                // Visual feedback
-                resetBtn.innerHTML = '✓';
-                resetBtn.style.background = '#4CAF50';
-                setTimeout(() => {
-                    resetBtn.innerHTML = '↺';
-                    resetBtn.style.background = 'rgba(0,0,0,0.7)';
-                }, 500);
-                
-                return false;
-            }
-            
-            lastTapTime = currentTime;
-        }, { passive: false });
     }
 
     // --- FIX EDIT MODAL UPDATE ---
@@ -1187,24 +1132,3 @@ function getDistance(t1, t2) {
     const dy = t2.clientY - t1.clientY;
     return Math.hypot(dx, dy);
 }
-
-// Global function to force reset view (for debugging)
-window.forceReset = function() {
-    const pan = document.getElementById('panLayer');
-    const img = document.getElementById('viewImage');
-    
-    if (pan && img) {
-        // Nuclear reset
-        pan.style.cssText = '';
-        pan.style.transform = 'translate(0px, 0px) scale(1)';
-        pan.style.transformOrigin = 'center center';
-        
-        img.style.height = '80vh';
-        img.style.width = 'auto';
-        
-        // Force re-render
-        pan.offsetHeight;
-        
-        console.log("Force reset complete");
-    }
-};
