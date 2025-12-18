@@ -527,7 +527,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Update footer text
     function updateFooter(text) {
         const footer = document.querySelector('.footer');
-        footer.innerHTML = `${text} <button class="footer-control load-btn" id="loadBtn">📂 Load..</button>`;
+        footer.innerHTML = `${text} <button class="footer-control load-btn" id="loadBtn">📂 Load...</button>`;
 
         // Update the load button event listener
         const newLoadBtn = document.getElementById('loadBtn');
