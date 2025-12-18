@@ -1,6 +1,12 @@
 // main.js - Updated with localStorage persistence and clear functionality
 document.addEventListener("DOMContentLoaded", () => {
     // DOM Elements
+    // 🔴 Block browser pinch zoom (mobile Safari & Chrome)
+    document.addEventListener('gesturestart', e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('gestureend', e => e.preventDefault());
+
+
     const container = document.getElementById("container");
     const pan = document.getElementById("panLayer");
     const img = document.getElementById("viewImage");
@@ -69,6 +75,25 @@ document.addEventListener("DOMContentLoaded", () => {
         updateButtonPositions();
     }
 
+    function resetViewHard() {
+        // Reset transform values
+        scale = 1;
+        posX = 0;
+        posY = 0;
+
+        // Reset pinch state
+        isPinching = false;
+        lastPinchDistance = null;
+
+        // Force transform reset
+        pan.style.transform = 'translate(0px, 0px) scale(1)';
+        pan.style.transformOrigin = 'center center';
+
+        // Re-sync buttons & dimmers
+        updateButtonPositions();
+    }
+
+
     // Get image metadata for buttons.js
     function getImageMetadata() {
         return {
@@ -81,11 +106,12 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
-    // Apply transform to pan layer
     function applyTransform() {
+        pan.style.transformOrigin = 'center center';
         pan.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
         updateButtonPositions();
     }
+
 
     // Update button positions
     function updateButtonPositions() {
@@ -468,7 +494,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Update footer text
     function updateFooter(text) {
         const footer = document.querySelector('.footer');
-        footer.innerHTML = `${text} <button class="footer-control load-btn" id="loadBtn">📂 Load</button>`;
+        footer.innerHTML = `${text} <button class="footer-control load-btn" id="loadBtn">📂 Load..</button>`;
 
         // Update the load button event listener
         const newLoadBtn = document.getElementById('loadBtn');
@@ -575,10 +601,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // Zoom
         container.addEventListener('wheel', handleZoom, { passive: false });
 
-        // Reset button
         resetBtn.addEventListener('click', () => {
-            initImage();
+            resetViewHard();
         });
+
 
         // Edit mode toggle
         editBtn.addEventListener('click', () => {
