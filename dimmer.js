@@ -140,9 +140,23 @@ window.DimmerModule = (function () {
     }
 
     // Save to localStorage
-    function saveToLocalStorage() {
-        localStorage.setItem('dimmerButtons', JSON.stringify(dimmerButtons));
-    }
+function saveToLocalStorage() {
+    // Clean dimmer data before saving
+    const cleanDimmers = dimmerButtons.map(dimmer => ({
+        id: dimmer.id,
+        type: 'dimmer',
+        entityId: dimmer.entityId || '',
+        name: dimmer.name || 'Dimmer',
+        iconClass: dimmer.iconClass || 'fa-sliders-h',
+        position: {
+            x: Number(dimmer.position.x.toFixed(4)),
+            y: Number(dimmer.position.y.toFixed(4))
+        }
+        // DO NOT include: brightness, isOn, callbacks, etc.
+    }));
+    
+    localStorage.setItem('dimmerButtons', JSON.stringify(cleanDimmers));
+}
 
     // Create a dimmer button
     function create(config) {
@@ -591,26 +605,28 @@ window.DimmerModule = (function () {
     }
 
     // Toggle edit mode
-    function enableEditMode(flag) {
-        isEditMode = flag;
+// In dimmer.js, update the enableEditMode function:
 
-        dimmerButtons.forEach(config => {
-            const btn = document.getElementById(config.id);
-            if (btn) {
-                if (flag) {
-                    btn.classList.add('edit-mode');
-                    btn.style.cursor = 'grab';
-                } else {
-                    btn.classList.remove('edit-mode');
-                    btn.style.cursor = '';
-                }
+function enableEditMode(flag) {
+    isEditMode = flag;
+
+    dimmerButtons.forEach(config => {
+        const btn = document.getElementById(config.id);
+        if (btn) {
+            if (flag) {
+                btn.classList.add('edit-mode');
+                btn.style.cursor = 'grab';
+            } else {
+                btn.classList.remove('edit-mode');
+                btn.style.cursor = '';
             }
-        });
-
-        if (!flag) {
-            saveToLocalStorage();
         }
+    });
+
+    if (!flag) {
+        saveToLocalStorage();
     }
+}
 
     // Update positions (called when image zooms/pans)
     function updatePositions() {

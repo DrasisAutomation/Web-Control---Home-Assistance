@@ -83,25 +83,26 @@ window.buttons = (function () {
     }
 
     // Toggle edit mode
-    function enableEditMode(flag) {
-        isEditMode = flag;
+// In button.js, update the enableEditMode function:
 
-        // Update all buttons' edit mode state
-        lightButtons.forEach(button => {
-            const btn = document.getElementById(button.id);
-            if (btn) {
-                if (flag) {
-                    btn.classList.add('edit-mode');
-                    btn.style.cursor = 'grab';
-                } else {
-                    btn.classList.remove('edit-mode');
-                    btn.style.cursor = '';
-                    saveToLocalStorage();
-                }
+function enableEditMode(flag) {
+    isEditMode = flag;
+
+    // Update all buttons' edit mode state
+    lightButtons.forEach(button => {
+        const btn = document.getElementById(button.id);
+        if (btn) {
+            if (flag) {
+                btn.classList.add('edit-mode');
+                btn.style.cursor = 'grab';
+            } else {
+                btn.classList.remove('edit-mode');
+                btn.style.cursor = '';
+                saveToLocalStorage();
             }
-        });
-    }
-
+        }
+    });
+}
     // Create a new button
     function create(config) {
         // Generate unique ID if not provided
@@ -126,19 +127,28 @@ window.buttons = (function () {
         return config.id;
     }
 
-    // Save current state
-    function save() {
-        const imageMeta = getImageMetaFn ? getImageMetaFn() : {};
-        return {
-            meta: {
-                savedAt: new Date().toISOString(),
-                version: '1.0'
-            },
-            image: imageMeta.dataURL || imageMeta.src || '',
-            buttons: lightButtons,
-            transform: imageMeta.transform || {}
-        };
-    }
+function save() {
+    const imageMeta = getImageMetaFn ? getImageMetaFn() : {};
+
+    const cleanButtons = lightButtons.map(b => ({
+        id: b.id,
+        type: b.type,
+        entityId: b.entityId || '',
+        name: b.name || '',
+        iconClass: b.iconClass || '',
+        position: {
+            x: Number(b.position.x.toFixed(4)),
+            y: Number(b.position.y.toFixed(4))
+        }
+    }));
+
+    return {
+        image: imageMeta.src || '',
+        transform: imageMeta.transform || {},
+        buttons: cleanButtons
+    };
+}
+
 
     // Load from data
     function load(data) {

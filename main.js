@@ -1,7 +1,4 @@
-// main.js - Updated with localStorage persistence and clear functionality
 document.addEventListener("DOMContentLoaded", () => {
-    // DOM Elements
-    // 🔴 Block browser pinch zoom (mobile Safari & Chrome)
     document.addEventListener('gesturestart', e => e.preventDefault());
     document.addEventListener('gesturechange', e => e.preventDefault());
     document.addEventListener('gestureend', e => e.preventDefault());
@@ -19,43 +16,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const imageFileInput = document.getElementById("imageFileInput");
     const loadFileInput = document.getElementById("loadFileInput");
 
-    // REMOVED: const resetBtn = document.getElementById("resetBtn");
+    const buttonSize = document.getElementById('buttonSize');
+    const sizeValue = document.getElementById('sizeValue');
+    const buttonOpacity = document.getElementById('buttonOpacity');
+    const opacityValue = document.getElementById('opacityValue');
+    const modalOpacity = document.getElementById('modalOpacity');
+    const modalValue = document.getElementById('modalValue');
 
-    // Storage constants
     const STORAGE_KEY = 'floorplan_design_v1.1';
-    const DEFAULT_LOAD_FILE = 'load.json'; // Default file to load
+    const DEFAULT_LOAD_FILE = 'load.json';
 
-    // Zoom and Pan variables
     let scale = 1;
     const maxScale = 5;
     let minScale = 1;
-
     let posX = 0;
     let posY = 0;
-
-    // Image dimensions
     let imgNaturalW = 0;
     let imgNaturalH = 0;
-
     let lastPinchDistance = null;
     let isPinching = false;
-
-    // State variables
     let isEditMode = false;
     let isDragging = false;
-
-    // Drag start positions
     let dragStart = { x: 0, y: 0 };
     let panStart = { x: 0, y: 0 };
 
-    // WebSocket configuration
     const WS_URL = "wss://demo.lumihomepro1.com/api/websocket";
     const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzNGNlNThiNDk1Nzk0NDVmYjUxNzE2NDA0N2Q0MGNmZCIsImlhdCI6MTc2NTM0NzQ5MSwiZXhwIjoyMDgwNzA3NDkxfQ.Se5PGwx0U9aqyVRnD1uwvCv3F-aOE8H53CKA5TqsV7U";
 
-    // WebSocket connection
     let ws, ready = false;
 
-    // Initialize image when loaded
     img.onload = () => initImage();
     if (img.complete) initImage();
 
@@ -63,115 +52,69 @@ document.addEventListener("DOMContentLoaded", () => {
         imgNaturalW = img.naturalWidth;
         imgNaturalH = img.naturalHeight;
 
-        // Ensure image is properly sized
         img.style.height = '80vh';
         img.style.width = 'auto';
         img.style.maxWidth = 'none';
 
-        // Reset everything
         scale = 1;
         posX = 0;
         posY = 0;
 
-        // Apply transform with multiple methods
         pan.style.cssText = '';
         pan.style.transform = 'translate(0px, 0px) scale(1)';
         pan.style.transformOrigin = 'center center';
 
-        // Force layout recalculation
         pan.offsetHeight;
         container.offsetHeight;
 
-        // Re-apply after a frame
         requestAnimationFrame(() => {
             pan.style.transform = 'translate(0px, 0px) scale(1)';
             pan.style.transformOrigin = 'center center';
-
             updateButtonPositions();
         });
 
-        // Final update
         updateButtonPositions();
-        console.log("Image initialized. Size:", imgNaturalW, "x", imgNaturalH);
-    }
-
-    function debugViewState() {
-        console.log("=== DEBUG VIEW STATE ===");
-        console.log("Scale:", scale);
-        console.log("Position X:", posX, "Y:", posY);
-        console.log("Image natural size:", imgNaturalW, "x", imgNaturalH);
-        console.log("Image display size:", img.clientWidth, "x", img.clientHeight);
-        console.log("Container size:", container.clientWidth, "x", container.clientHeight);
-        console.log("Pan layer transform:", pan.style.transform);
-        console.log("Is dragging:", isDragging);
-        console.log("Is pinching:", isPinching);
-        console.log("========================");
     }
 
     function resetViewHard() {
-        console.log("Resetting view...");
-        debugViewState();
-
-        // Clear any ongoing drag/pinch
         isDragging = false;
         isPinching = false;
         container.classList.remove('grabbing');
 
-        // Reset transform values
         scale = 1;
         posX = 0;
         posY = 0;
 
-        // METHOD 1: Direct transform reset
         pan.style.transform = 'translate(0px, 0px) scale(1)';
         pan.style.transformOrigin = 'center center';
 
-        // METHOD 2: Remove and re-add transform style
         setTimeout(() => {
             pan.style.cssText = pan.style.cssText.replace(/transform[^;]*;?/g, '');
             pan.style.transform = 'translate(0px, 0px) scale(1)';
             pan.style.transformOrigin = 'center center';
         }, 10);
 
-        // METHOD 3: Force reflow multiple ways
-        pan.offsetHeight; // Trigger reflow
-        void pan.offsetWidth; // Another reflow trigger
+        pan.offsetHeight;
+        void pan.offsetWidth;
 
-        // METHOD 4: Use requestAnimationFrame for guaranteed execution
         requestAnimationFrame(() => {
             pan.style.transform = 'translate(0px, 0px) scale(1)';
             pan.style.transformOrigin = 'center center';
 
             requestAnimationFrame(() => {
-                // Double-check it's applied
                 pan.style.transform = 'translate(0px, 0px) scale(1)';
                 pan.style.transformOrigin = 'center center';
-
-                // Update everything
                 updateButtonPositions();
-
-                // Update footer for feedback
                 updateFooter('View reset');
-
-                // Force image to reload its natural dimensions
                 if (img.complete) {
                     initImage();
                 }
             });
         });
 
-        // Update button positions immediately
         updateButtonPositions();
-
-        // Log the reset
-        console.log("View reset complete. Scale:", scale, "PosX:", posX, "PosY:", posY);
-        setTimeout(() => {
-            debugViewState(); // Show after state
-        }, 100);
-
     }
 
-    // Get image metadata for buttons.js
     function getImageMetadata() {
         return {
             naturalWidth: img.clientWidth,
@@ -189,7 +132,6 @@ document.addEventListener("DOMContentLoaded", () => {
         updateButtonPositions();
     }
 
-    // Update button positions
     function updateButtonPositions() {
         if (buttons.updateButtonPositions) {
             buttons.updateButtonPositions();
@@ -199,9 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Handle image panning
     function startPan(e) {
-        // Don't start panning if clicking on a button
         if (e.target.closest('.light-button')) return;
 
         isDragging = true;
@@ -224,37 +164,31 @@ document.addEventListener("DOMContentLoaded", () => {
         const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
         const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
 
-        // Calculate movement
         const deltaX = clientX - dragStart.x;
         const deltaY = clientY - dragStart.y;
 
-        // Apply movement to position
         posX = panStart.x + deltaX;
         posY = panStart.y + deltaY;
 
-        // Apply boundaries
         const containerW = container.clientWidth;
         const containerH = container.clientHeight;
 
-        // Real visible image size
         const scaledW = img.clientWidth * scale;
         const scaledH = img.clientHeight * scale;
 
-        // Maximum panning amounts
         const maxX = Math.max(0, (scaledW - containerW) / 2);
         const maxY = Math.max(0, (scaledH - containerH) / 2);
 
-        // Allow dragging only if image is larger than container
         if (scaledW > containerW) {
             posX = Math.max(-maxX, Math.min(maxX, posX));
         } else {
-            posX = 0; // Center if image fits
+            posX = 0;
         }
 
         if (scaledH > containerH) {
             posY = Math.max(-maxY, Math.min(maxY, posY));
         } else {
-            posY = 0; // Center if image fits
+            posY = 0;
         }
 
         applyTransform();
@@ -266,11 +200,9 @@ document.addEventListener("DOMContentLoaded", () => {
         container.classList.remove('grabbing');
     }
 
-    // Handle zooming
     function handleZoom(e) {
         e.preventDefault();
 
-        // Calculate zoom factor
         const zoomIntensity = 0.001;
         const delta = e.deltaY;
         const zoomFactor = 1 - delta * zoomIntensity;
@@ -280,12 +212,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (scale === oldScale) return;
 
-        // Get mouse position relative to container center
         const rect = container.getBoundingClientRect();
         const mouseX = e.clientX - rect.left - rect.width / 2;
         const mouseY = e.clientY - rect.top - rect.height / 2;
 
-        // Adjust position to zoom toward mouse
         const scaleChange = scale / oldScale;
         posX = mouseX - (mouseX - posX) * scaleChange;
         posY = mouseY - (mouseY - posY) * scaleChange;
@@ -293,17 +223,14 @@ document.addEventListener("DOMContentLoaded", () => {
         applyTransform();
     }
 
-    // Update brightness/percentage for dimmers and fans
     function updateBrightness(entityId, brightness, buttonId) {
         if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
-            console.log("Not ready to update brightness");
             return;
         }
 
         const domain = getDomainFromEntityId(entityId);
 
         if (domain === 'light') {
-            // Convert percentage to HA brightness value (0-255)
             const haBrightness = Math.round((brightness / 100) * 255);
 
             ws.send(JSON.stringify({
@@ -317,11 +244,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }));
 
-            console.log(`Light brightness updated to ${brightness}% (${haBrightness})`);
             updateFooter(`Brightness set to ${brightness}%`);
         }
         else if (domain === 'fan') {
-            // Convert percentage to fan speed percentage
             const percentage = Math.round(brightness);
 
             ws.send(JSON.stringify({
@@ -335,54 +260,123 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }));
 
-            console.log(`Fan speed set to ${brightness}%`);
             updateFooter(`Fan speed set to ${brightness}%`);
         }
     }
 
-    // Save design to localStorage and JSON file
     function saveDesign() {
-        const buttonData = buttons.save();
-        const dimmerData = window.DimmerModule ? DimmerModule.getDimmerButtons() : [];
+        console.log('Saving design...');
 
+        // Get CURRENT slider values
+        const currentButtonSize = buttonSize ? parseFloat(buttonSize.value) : 1;
+        const currentButtonOpacity = buttonOpacity ? parseFloat(buttonOpacity.value) : 0.8;
+        const currentModalOpacity = modalOpacity ? parseFloat(modalOpacity.value) : 0.6;
+
+        console.log('Current slider values:', {
+            buttonSize: currentButtonSize,
+            buttonOpacity: currentButtonOpacity,
+            modalOpacity: currentModalOpacity
+        });
+
+        // Save to localStorage slider values
+        const sliderValues = {
+            buttonSize: currentButtonSize,
+            buttonOpacity: currentButtonOpacity,
+            modalOpacity: currentModalOpacity,
+            lastSaved: new Date().toISOString()
+        };
+
+        localStorage.setItem('sliderValues', JSON.stringify(sliderValues));
+
+        // Get all buttons
+        const allButtons = buttons.getButtons();
+        const dimmerButtons = window.DimmerModule ? DimmerModule.getDimmerButtons() : [];
+
+        // Create unified buttons array
+        const unifiedButtons = [];
+
+        // Add regular buttons
+        allButtons.forEach(button => {
+            if (button && button.id) {
+                unifiedButtons.push({
+                    id: button.id,
+                    type: button.type || 'toggle',
+                    entityId: button.entityId || '',
+                    name: button.name || '',
+                    iconClass: button.iconClass || 'fa-lightbulb',
+                    position: {
+                        x: button.position ? Number(button.position.x.toFixed(4)) : 0.5,
+                        y: button.position ? Number(button.position.y.toFixed(4)) : 0.5
+                    }
+                });
+            }
+        });
+
+        // Add dimmer buttons
+        dimmerButtons.forEach(dimmer => {
+            if (dimmer && dimmer.id) {
+                unifiedButtons.push({
+                    id: dimmer.id,
+                    type: 'dimmer',
+                    entityId: dimmer.entityId || '',
+                    name: dimmer.name || 'Dimmer',
+                    iconClass: dimmer.iconClass || 'fa-sliders-h',
+                    position: {
+                        x: dimmer.position ? Number(dimmer.position.x.toFixed(4)) : 0.5,
+                        y: dimmer.position ? Number(dimmer.position.y.toFixed(4)) : 0.5
+                    }
+                });
+            }
+        });
+
+        // Get image metadata
+        const imageMeta = getImageMetadata();
+
+        // Create design data WITH settings
         const designData = {
             meta: {
                 savedAt: new Date().toISOString(),
-                version: '1.1',
-                hasDimmers: dimmerData.length > 0
+                version: '1.4',
+                totalButtons: unifiedButtons.length
             },
-            image: buttonData.image || '',
-            buttons: buttonData.buttons || [],
-            dimmers: dimmerData,
-            transform: buttonData.transform || {}
+            settings: {
+                buttonSize: currentButtonSize,
+                buttonOpacity: currentButtonOpacity,
+                modalOpacity: currentModalOpacity
+            },
+            image: imageMeta.src || '',
+            transform: {
+                scale: Number(scale.toFixed(3)),
+                posX: Number(posX.toFixed(2)),
+                posY: Number(posY.toFixed(2))
+            },
+            buttons: unifiedButtons
         };
+
+        console.log('Saving design data:', designData);
 
         // Save to localStorage
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(designData));
             console.log('Design saved to localStorage');
         } catch (error) {
-            console.error('Failed to save to localStorage:', error);
+            console.error('Could not save to localStorage:', error);
         }
 
-        // Create blob and download JSON file
+        // Download as file
         const blob = new Blob([JSON.stringify(designData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-
         const a = document.createElement('a');
         a.href = url;
         a.download = 'floorplan-design.json';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-
         URL.revokeObjectURL(url);
 
-        // Update footer
-        updateFooter('Design saved!');
+        updateFooter('Design saved with current settings!');
     }
 
-    // Load design from JSON file
     function loadDesign(file) {
         const reader = new FileReader();
 
@@ -391,16 +385,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 const designData = JSON.parse(e.target.result);
                 applyDesign(designData);
 
-                // Save to localStorage when loading from file
                 try {
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(designData));
-                    console.log('Design saved to localStorage');
                 } catch (error) {
-                    console.error('Failed to save to localStorage:', error);
                 }
 
             } catch (error) {
-                console.error("Error loading design:", error);
                 alert("Error loading design file. Please check the file format.");
             }
         };
@@ -408,7 +398,6 @@ document.addEventListener("DOMContentLoaded", () => {
         reader.readAsText(file);
     }
 
-    // Load design from URL (load.json)
     async function loadDesignFromURL(url) {
         try {
             const response = await fetch(url);
@@ -417,46 +406,107 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const designData = await response.json();
-            console.log(`Design loaded from ${url}`);
+
+            // Remove duplicates before applying
+            if (designData.buttons && Array.isArray(designData.buttons)) {
+                designData.buttons = removeDuplicateButtons(designData.buttons);
+            }
+
             applyDesign(designData);
 
-            // Save to localStorage when loading from URL
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(designData));
-                console.log('Design saved to localStorage');
             } catch (error) {
-                console.error('Failed to save to localStorage:', error);
+                console.warn('Could not save to localStorage:', error);
             }
 
         } catch (error) {
-            console.error(`Error loading design from ${url}:`, error);
-            // Don't show alert for default file - it's optional
             if (url !== DEFAULT_LOAD_FILE) {
                 alert(`Error loading design from ${url}. Please check if the file exists and is valid JSON.`);
             }
         }
     }
 
-    // Apply design data to the interface
     function applyDesign(designData) {
-        // Helper: load data + update HA states
+        console.log('Applying design:', designData);
+
         function finishLoading() {
-            // Clear existing buttons and dimmers
+            console.log('Finishing design load...');
+
+            // Clear ALL existing buttons first
             clearAllButtons();
 
-            // Load regular buttons
-            if (designData.buttons) {
-                buttons.load(designData);
+            // Clear arrays
+            if (buttons && buttons.getButtons) {
+                buttons.getButtons().length = 0;
             }
 
-            // Load dimmers
-            if (designData.dimmers && window.DimmerModule) {
-                designData.dimmers.forEach(dimmerConfig => {
-                    DimmerModule.create(dimmerConfig);
-                });
+            if (window.DimmerModule && DimmerModule.getDimmerButtons) {
+                DimmerModule.getDimmerButtons().length = 0;
             }
 
-            // Apply transform if available
+            // Remove all button elements
+            document.querySelectorAll('.light-button').forEach(btn => btn.remove());
+
+            // Apply slider settings from design
+            if (designData.settings) {
+                console.log('Loading settings from design:', designData.settings);
+
+                // Apply button size
+                if (designData.settings.buttonSize !== undefined) {
+                    const size = parseFloat(designData.settings.buttonSize);
+                    if (!isNaN(size)) {
+                        console.log('Setting button size to:', size);
+                        document.documentElement.style.setProperty('--button-scale', size.toString());
+                        if (buttonSize) {
+                            buttonSize.value = size;
+                        }
+                        if (sizeValue) {
+                            sizeValue.textContent = `${Math.round(size * 100)}%`;
+                        }
+                    }
+                }
+
+                // Apply button opacity
+                if (designData.settings.buttonOpacity !== undefined) {
+                    const opacity = parseFloat(designData.settings.buttonOpacity);
+                    if (!isNaN(opacity)) {
+                        console.log('Setting button opacity to:', opacity);
+                        document.documentElement.style.setProperty('--button-opacity', opacity.toString());
+                        if (buttonOpacity) {
+                            buttonOpacity.value = opacity;
+                        }
+                        if (opacityValue) {
+                            opacityValue.textContent = `${Math.round(opacity * 100)}%`;
+                        }
+                    }
+                }
+
+                // Apply modal opacity
+                if (designData.settings.modalOpacity !== undefined) {
+                    const modalOpacityValue = parseFloat(designData.settings.modalOpacity);
+                    if (!isNaN(modalOpacityValue)) {
+                        console.log('Setting modal opacity to:', modalOpacityValue);
+                        document.documentElement.style.setProperty('--dimmer-content-opacity', modalOpacityValue.toString());
+                        if (modalOpacity) {
+                            modalOpacity.value = modalOpacityValue;
+                        }
+                        if (modalValue) {
+                            modalValue.textContent = `${Math.round(modalOpacityValue * 100)}%`;
+                        }
+                    }
+                }
+
+                // Save these settings to localStorage sliderValues
+                const sliderValues = {
+                    buttonSize: designData.settings.buttonSize || 1,
+                    buttonOpacity: designData.settings.buttonOpacity || 0.8,
+                    modalOpacity: designData.settings.modalOpacity || 0.6
+                };
+                localStorage.setItem('sliderValues', JSON.stringify(sliderValues));
+            }
+
+            // Apply transform if exists
             if (designData.transform) {
                 scale = designData.transform.scale || scale;
                 posX = designData.transform.posX || posX;
@@ -466,7 +516,44 @@ document.addEventListener("DOMContentLoaded", () => {
                 initImage();
             }
 
-            // Request updated HA light states
+            // Load buttons from design data
+            if (designData.buttons && Array.isArray(designData.buttons)) {
+                console.log('Loading buttons:', designData.buttons.length);
+
+                designData.buttons.forEach((buttonConfig, index) => {
+                    // Clean config
+                    const cleanConfig = {
+                        id: buttonConfig.id || `button_${Date.now()}_${index}`,
+                        type: buttonConfig.type || 'toggle',
+                        entityId: buttonConfig.entityId || '',
+                        name: buttonConfig.name || '',
+                        iconClass: buttonConfig.iconClass || (buttonConfig.type === 'dimmer' ? 'fa-sliders-h' : 'fa-lightbulb'),
+                        position: buttonConfig.position || { x: 0.5, y: 0.5 }
+                    };
+
+                    console.log(`Creating button ${index}:`, cleanConfig);
+
+                    // Create button based on type
+                    if (cleanConfig.type === 'dimmer') {
+                        if (window.DimmerModule && DimmerModule.create) {
+                            DimmerModule.create(cleanConfig);
+                        }
+                    } else {
+                        buttons.create(cleanConfig);
+                    }
+                });
+            }
+
+            // Apply button opacity to all buttons after creation
+            setTimeout(() => {
+                const currentOpacity = buttonOpacity ? parseFloat(buttonOpacity.value) : 0.8;
+                console.log('Applying opacity to all buttons:', currentOpacity);
+                document.querySelectorAll('.light-button').forEach(btn => {
+                    btn.style.opacity = currentOpacity;
+                });
+            }, 200);
+
+            // Get fresh states from Home Assistant
             if (ready && ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     id: Date.now(),
@@ -474,10 +561,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 }));
             }
 
-            updateFooter("Design loaded!");
+            updateFooter("Design loaded with saved settings!");
         }
 
-        // Image handling
+        // Handle image loading
         if (designData.image) {
             if (designData.image.startsWith('data:')) {
                 img.onload = finishLoading;
@@ -503,45 +590,53 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Clear all buttons, dimmers, and localStorage
+    // Add this function to remove duplicate buttons
+    function removeDuplicateButtons(buttonsArray) {
+        const seen = new Set();
+        return buttonsArray.filter(button => {
+            // Create a unique key for each button
+            const key = `${button.entityId}_${button.position.x}_${button.position.y}_${button.type}`;
+
+            if (seen.has(key)) {
+                return false; // Duplicate
+            }
+
+            seen.add(key);
+            return true;
+        });
+    }
     function clearAll() {
-        if (!confirm("Are you sure you want to clear all buttons, dimmers, and reset the design? This action cannot be undone.")) {
+        if (!confirm("Are you sure you want to clear all buttons and reset the design? This action cannot be undone.")) {
             return;
         }
 
-        // Clear all buttons from buttons module
-        buttons.getButtons().forEach(button => {
-            buttons.deleteButton(button.id);
-        });
+        // Clear all buttons
+        clearAllButtons();
 
-        // Clear all dimmers
-        if (window.DimmerModule && DimmerModule.getDimmerButtons) {
-            DimmerModule.getDimmerButtons().forEach(dimmer => {
-                DimmerModule.deleteButton(dimmer.id);
-            });
-        }
-
-        // Clear localStorage
+        // Clear design storage but KEEP slider values
         localStorage.removeItem(STORAGE_KEY);
 
-        // Reset image to default
+        // DO NOT remove sliderValues!
+        // localStorage.removeItem('sliderValues'); // REMOVE THIS LINE!
+
+        // Reset image
         img.src = 'image.png';
 
-        // Reset transform
+        // Reset view
         initImage();
 
-        updateFooter('All cleared!');
+        // Sliders should KEEP their values from localStorage
+        // They will be loaded automatically via loadSliderValues()
+
+        updateFooter('All cleared! (slider settings preserved)');
     }
 
-    // Clear all buttons and dimmers (without confirmation, used internally)
     function clearAllButtons() {
-        // Clear all buttons from buttons module
         const allButtons = buttons.getButtons();
         allButtons.forEach(button => {
             buttons.deleteButton(button.id);
         });
 
-        // Clear all dimmers
         if (window.DimmerModule && DimmerModule.getDimmerButtons) {
             const allDimmers = DimmerModule.getDimmerButtons();
             allDimmers.forEach(dimmer => {
@@ -550,30 +645,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Load design from localStorage on page load
     function loadFromStorage() {
         try {
             const storedData = localStorage.getItem(STORAGE_KEY);
             if (storedData) {
                 const designData = JSON.parse(storedData);
-                console.log('Loading design from localStorage');
                 applyDesign(designData);
                 return true;
             }
         } catch (error) {
-            console.error('Failed to load from localStorage:', error);
-            localStorage.removeItem(STORAGE_KEY); // Clear corrupted data
+            localStorage.removeItem(STORAGE_KEY);
         }
         return false;
     }
 
-    // main.js - Update the updateFooter function
     function updateFooter(text) {
         const footer = document.querySelector('.footer');
         footer.innerHTML = `
         <span>${text}</span>
         <div style="display: flex; gap: 10px;">
-            <button class="footer-control load-btn" id="loadBtn">📂 Load</button>
+            <button class="footer-control load-btn" id="loadBtn">📂 Load...</button>
             <button class="footer-control reset-footer-btn" id="footerResetBtn" 
                     style="background: #666; padding: 4px 8px; border-radius: 4px;">
                 ↻
@@ -581,7 +672,6 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
     `;
 
-        // Add event listener to new reset button
         const footerResetBtn = document.getElementById('footerResetBtn');
         if (footerResetBtn) {
             footerResetBtn.addEventListener('click', () => {
@@ -590,7 +680,6 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
-        // Update the load button event listener
         const newLoadBtn = document.getElementById('loadBtn');
         if (newLoadBtn) {
             newLoadBtn.addEventListener('click', () => {
@@ -599,9 +688,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Show notification
     function showNotification(message, type = 'info') {
-        // Remove existing notification
         const existing = document.querySelector('.notification-indicator');
         if (existing) existing.remove();
 
@@ -613,7 +700,6 @@ document.addEventListener("DOMContentLoaded", () => {
         notification.textContent = message;
         document.body.appendChild(notification);
 
-        // Auto-remove after animation
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.remove();
@@ -621,7 +707,119 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 2000);
     }
 
-    // Set up event listeners
+    function saveSliderValues() {
+        const sliderValues = {
+            buttonSize: buttonSize ? parseFloat(buttonSize.value) : 1,
+            buttonOpacity: buttonOpacity ? parseFloat(buttonOpacity.value) : 1,
+            modalOpacity: modalOpacity ? parseFloat(modalOpacity.value) : 1,
+            lastSaved: new Date().toISOString()
+        };
+
+        try {
+            localStorage.setItem('sliderValues', JSON.stringify(sliderValues));
+        } catch (error) {
+            console.warn('Could not save slider values:', error);
+        }
+    }
+
+    function loadSliderValues() {
+        try {
+            const saved = JSON.parse(localStorage.getItem('sliderValues') || '{}');
+
+            console.log('Loading saved slider values:', saved);
+
+            /* ---------- BUTTON SIZE ---------- */
+            if (saved.buttonSize !== undefined) {
+                const size = parseFloat(saved.buttonSize);
+                if (!isNaN(size) && buttonSize) {
+                    buttonSize.value = size;
+                    document.documentElement.style.setProperty('--button-scale', size.toString());
+                    if (sizeValue) {
+                        sizeValue.textContent = `${Math.round(size * 100)}%`;
+                    }
+                    console.log('Loaded button size:', size);
+                }
+            }
+
+            /* ---------- BUTTON OPACITY ---------- */
+            if (saved.buttonOpacity !== undefined) {
+                const opacity = parseFloat(saved.buttonOpacity);
+                if (!isNaN(opacity) && buttonOpacity) {
+                    buttonOpacity.value = opacity;
+                    // Apply to CSS variable
+                    document.documentElement.style.setProperty('--button-opacity', opacity.toString());
+                    // Apply to all buttons immediately
+                    document.querySelectorAll('.light-button').forEach(btn => {
+                        btn.style.opacity = opacity;
+                    });
+                    if (opacityValue) {
+                        opacityValue.textContent = `${Math.round(opacity * 100)}%`;
+                    }
+                    console.log('Loaded button opacity:', opacity);
+                }
+            }
+
+            /* ---------- MODAL OPACITY ---------- */
+            if (saved.modalOpacity !== undefined) {
+                const modalOpacityValue = parseFloat(saved.modalOpacity);
+                if (!isNaN(modalOpacityValue) && modalOpacity) {
+                    modalOpacity.value = modalOpacityValue;
+                    // Apply to CSS variable
+                    document.documentElement.style.setProperty('--dimmer-content-opacity', modalOpacityValue.toString());
+                    if (modalValue) {
+                        modalValue.textContent = `${Math.round(modalOpacityValue * 100)}%`;
+                    }
+                    console.log('Loaded modal opacity:', modalOpacityValue);
+                }
+            }
+
+        } catch (error) {
+            console.error('Error loading slider values:', error);
+            // Set defaults
+            document.documentElement.style.setProperty('--button-scale', '1');
+            document.documentElement.style.setProperty('--button-opacity', '1');
+            document.documentElement.style.setProperty('--dimmer-content-opacity', '1');
+        }
+    }
+
+
+    function applyModalOpacity(opacityValue) {
+        const opacity = parseFloat(opacityValue);
+
+        document.documentElement.style.setProperty(
+            '--dimmer-content-opacity',
+            opacity
+        );
+    }
+
+
+
+    function applyButtonOpacity(opacityValue) {
+        const opacity = parseFloat(opacityValue);
+
+        if (isNaN(opacity)) return;
+
+        // Always update the CSS variable
+        document.documentElement.style.setProperty('--button-opacity', opacity.toString());
+
+        // Force update all buttons
+        const allButtons = document.querySelectorAll('.light-button');
+        allButtons.forEach(button => {
+            button.style.opacity = opacity;
+        });
+
+        // Update slider if it exists
+        if (buttonOpacity) {
+            buttonOpacity.value = opacity;
+        }
+
+        // Update display if it exists
+        if (opacityValue) {
+            opacityValue.textContent = `${Math.round(opacity * 100)}%`;
+        }
+    }
+
+
     function setupEventListeners() {
         container.addEventListener('touchstart', (e) => {
             if (e.touches.length === 2) {
@@ -641,7 +839,6 @@ document.addEventListener("DOMContentLoaded", () => {
             scale *= zoomFactor;
             scale = Math.min(maxScale, Math.max(minScale, scale));
 
-            // Zoom towards center of pinch
             const rect = container.getBoundingClientRect();
             const centerX =
                 (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left - rect.width / 2;
@@ -665,7 +862,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-        // Image panning
         container.addEventListener('mousedown', (e) => {
             if (e.target.closest('.light-button')) return;
             startPan(e);
@@ -676,7 +872,6 @@ document.addEventListener("DOMContentLoaded", () => {
             startPan(e);
         }, { passive: false });
 
-        // Move events
         window.addEventListener('mousemove', (e) => {
             if (isDragging) doPan(e);
         });
@@ -686,16 +881,26 @@ document.addEventListener("DOMContentLoaded", () => {
             if (isDragging) doPan(e);
         }, { passive: false });
 
-        // End events
         window.addEventListener('mouseup', stopPan);
         window.addEventListener('touchend', stopPan);
 
-        // Zoom
         container.addEventListener('wheel', handleZoom, { passive: false });
 
-        // REMOVED: Reset button event listener from main controls
+        // Replace the applyButtonOpacity function with this:
+        function applyButtonOpacity(opacityValue) {
+            const opacity = parseFloat(opacityValue);
 
-        // Edit mode toggle
+            // Always update the CSS variable
+            document.documentElement.style.setProperty('--button-opacity', opacity.toString());
+
+            // Force update all buttons
+            const buttons = document.querySelectorAll('.light-button');
+            buttons.forEach(button => {
+                button.style.opacity = opacity;
+            });
+        }
+
+        // In the editBtn click event listener, replace the opacity section:
         editBtn.addEventListener('click', () => {
             isEditMode = !isEditMode;
 
@@ -705,7 +910,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 container.classList.add('edit-mode');
                 editControls.style.display = 'flex';
 
-                // Enable edit mode in both modules
+                // Always apply saved opacity when entering edit mode
+                if (buttonOpacity) {
+                    const opacityVal = parseFloat(buttonOpacity.value);
+                    applyButtonOpacity(opacityVal);
+                }
+
                 buttons.enableEditMode(true);
                 if (window.DimmerModule && DimmerModule.enableEditMode) {
                     DimmerModule.enableEditMode(true);
@@ -716,7 +926,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 container.classList.remove('edit-mode');
                 editControls.style.display = 'none';
 
-                // Disable edit mode in both modules
+                // Set opacity to 1 (full opacity) when NOT in edit mode
+                applyButtonOpacity('1');
+
                 buttons.enableEditMode(false);
                 if (window.DimmerModule && DimmerModule.enableEditMode) {
                     DimmerModule.enableEditMode(false);
@@ -724,25 +936,20 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-        // Save button
         saveBtn.addEventListener('click', saveDesign);
 
-        // Load button - CHANGED: Now loads DEFAULT_LOAD_FILE directly
         loadBtn.addEventListener('click', () => {
             loadDesignFromURL(DEFAULT_LOAD_FILE);
         });
 
-        // Keep the file input for manual loading if needed
         loadFileInput.addEventListener('change', (e) => {
             if (e.target.files[0]) {
                 loadDesign(e.target.files[0]);
             }
         });
 
-        // Clear All button
         clearAllBtn.addEventListener('click', clearAll);
 
-        // Image button (edit mode)
         imageBtn.addEventListener('click', () => imageFileInput.click());
         imageFileInput.addEventListener('change', (e) => {
             if (e.target.files[0]) {
@@ -755,13 +962,73 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-        // Add button (edit mode)
         addBtn.addEventListener('click', () => {
             document.getElementById('buttonPickerModal').style.display = 'flex';
         });
+
+        setupSliderListeners();
     }
 
-    // --- FIX EDIT MODAL UPDATE ---
+    function setupSliderListeners() {
+        // Button Size Slider
+        if (buttonSize && sizeValue) {
+            buttonSize.addEventListener('input', () => {
+                const size = parseFloat(buttonSize.value);
+
+                // Update CSS variable
+                document.documentElement.style.setProperty('--button-scale', size.toString());
+
+                // Update display
+                if (sizeValue) sizeValue.textContent = `${Math.round(size * 100)}%`;
+
+                // Save immediately
+                saveSliderValues();
+
+                console.log('Button size changed:', size);
+            });
+        }
+
+        // Button Opacity Slider
+        if (buttonOpacity && opacityValue) {
+            buttonOpacity.addEventListener('input', () => {
+                const opacity = parseFloat(buttonOpacity.value);
+
+                // Apply to CSS variable
+                document.documentElement.style.setProperty('--button-opacity', opacity.toString());
+
+                // Apply to all buttons immediately
+                document.querySelectorAll('.light-button').forEach(btn => {
+                    btn.style.opacity = opacity;
+                });
+
+                // Update display
+                if (opacityValue) opacityValue.textContent = `${Math.round(opacity * 100)}%`;
+
+                // Save immediately
+                saveSliderValues();
+
+                console.log('Button opacity changed:', opacity);
+            });
+        }
+
+        // Modal Opacity Slider
+        if (modalOpacity && modalValue) {
+            modalOpacity.addEventListener('input', () => {
+                const opacity = parseFloat(modalOpacity.value);
+
+                // Apply to CSS variable
+                document.documentElement.style.setProperty('--dimmer-content-opacity', opacity.toString());
+
+                // Update display
+                if (modalValue) modalValue.textContent = `${Math.round(opacity * 100)}%`;
+
+                // Save immediately
+                saveSliderValues();
+
+                console.log('Modal opacity changed:', opacity);
+            });
+        }
+    }
     document.getElementById("buttonEditForm").addEventListener("submit", function (e) {
         e.preventDefault();
 
@@ -769,7 +1036,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const name = document.getElementById("editName").value.trim();
         const icon = document.getElementById("editIcon").value;
 
-        const btnId = buttons.getEditingButtonId();  // Use the getter function
+        const btnId = buttons.getEditingButtonId();
 
         if (!btnId) {
             alert("No button selected.");
@@ -781,21 +1048,17 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Update the button configuration
         buttons.updateButtonConfig(btnId, {
             entityId: entityId,
             name: name || 'Button',
             iconClass: icon
         });
 
-        // Close modal
         document.getElementById("buttonEditModal").style.display = "none";
 
-        // Clear the editing button ID
         buttons.setEditingButtonId(null);
     });
 
-    // Button edit modal close
     document.getElementById('closeEditBtn')?.addEventListener('click', () => {
         document.getElementById('buttonEditModal').style.display = 'none';
         editingButtonId = null;
@@ -804,7 +1067,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Close on overlay click - also clear editing button ID
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) {
@@ -817,12 +1079,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // WebSocket Functions
     function connectWebSocket() {
         ws = new WebSocket(WS_URL);
 
         ws.onopen = () => {
-            console.log("WebSocket connected");
             ws.send(JSON.stringify({ type: "auth", access_token: TOKEN }));
         };
 
@@ -830,17 +1090,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = JSON.parse(e.data);
 
             if (data.type === "auth_ok") {
-                console.log("Authentication successful");
                 ready = true;
 
-                // Get initial states
                 setTimeout(() => {
                     ws.send(JSON.stringify({
                         id: 1,
                         type: "get_states"
                     }));
 
-                    // Subscribe to changes
                     setTimeout(() => {
                         ws.send(JSON.stringify({
                             id: 2,
@@ -853,7 +1110,6 @@ document.addEventListener("DOMContentLoaded", () => {
             else if (data.type === "result" && Array.isArray(data.result)) {
                 const states = data.result;
 
-                // Update regular buttons
                 buttons.getButtons().forEach(button => {
                     const st = states.find(s => s.entity_id === button.entityId);
                     if (st) {
@@ -861,16 +1117,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
                         const domain = getDomainFromEntityId(button.entityId);
 
-                        // Handle brightness/percentage for different entity types
                         if (domain === 'light' || domain === 'fan') {
                             const brightness = st.attributes?.brightness || st.attributes?.percentage;
                             if (brightness !== undefined) {
-                                // Convert to percentage
                                 let brightnessPercent;
                                 if (domain === 'light') {
                                     brightnessPercent = Math.round((brightness / 255) * 100);
                                 } else {
-                                    brightnessPercent = brightness; // Already in percentage for fans
+                                    brightnessPercent = brightness;
                                 }
 
                                 if (window.DimmerModule && DimmerModule.handleStateUpdate) {
@@ -885,7 +1139,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 });
 
-                // Update dimmer buttons
                 if (window.DimmerModule && DimmerModule.getDimmerButtons) {
                     DimmerModule.getDimmerButtons().forEach(dimmer => {
                         const st = states.find(s => s.entity_id === dimmer.entityId);
@@ -905,12 +1158,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 const entityId = data.event.data.entity_id;
                 const newState = data.event.data.new_state;
 
-                // Update regular buttons
                 const allLights = buttons.getButtons().filter(l => l.entityId === entityId);
                 allLights.forEach(light => {
                     updateLightUI(light.id, newState.state === "on");
 
-                    // Update dimmer if applicable
                     if (light.type === 'dimmer') {
                         const brightness = newState.attributes?.brightness;
                         const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
@@ -924,7 +1175,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 });
 
-                // Update dimmer module
                 if (window.DimmerModule && DimmerModule.handleStateUpdate) {
                     const brightness = newState.attributes?.brightness;
                     const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
@@ -938,13 +1188,11 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         ws.onerror = (error) => {
-            console.error("WebSocket error:", error);
             buttons.getButtons().forEach(light => {
                 const btn = document.getElementById(light.id);
                 if (btn) btn.disabled = true;
             });
 
-            // Disable dimmer buttons too
             if (window.DimmerModule && DimmerModule.getDimmerButtons) {
                 DimmerModule.getDimmerButtons().forEach(dimmer => {
                     const btn = document.getElementById(dimmer.id);
@@ -954,13 +1202,11 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         ws.onclose = () => {
-            console.log("WebSocket disconnected");
             buttons.getButtons().forEach(light => {
                 const btn = document.getElementById(light.id);
                 if (btn) btn.disabled = true;
             });
 
-            // Disable dimmer buttons too
             if (window.DimmerModule && DimmerModule.getDimmerButtons) {
                 DimmerModule.getDimmerButtons().forEach(dimmer => {
                     const btn = document.getElementById(dimmer.id);
@@ -973,15 +1219,12 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
-    // Toggle light via WebSocket
     function toggleLight(entityId, buttonId) {
-        // Don't toggle if we're in edit mode
         if (isEditMode) {
             return;
         }
 
         if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
-            console.log("Not ready to toggle");
             return;
         }
 
@@ -991,55 +1234,44 @@ document.addEventListener("DOMContentLoaded", () => {
         const btn = document.getElementById(buttonId);
         const isOn = btn.classList.contains('on');
 
-        // For dimmers, ALWAYS open dimmer modal when clicked
         if (light.type === 'dimmer') {
-            // Open dimmer modal
             if (window.DimmerModule && DimmerModule.openDimmerModal) {
                 DimmerModule.openDimmerModal(light);
             }
             return;
         }
 
-        // Determine domain and service based on entity ID
         const domain = getDomainFromEntityId(entityId);
         let service, serviceData;
 
-        // For switch entities
         if (domain === 'switch') {
             service = isOn ? "turn_off" : "turn_on";
             serviceData = { entity_id: entityId };
         }
-        // For light entities (including dimmers)
         else if (domain === 'light') {
             service = isOn ? "turn_off" : "turn_on";
             serviceData = { entity_id: entityId };
         }
-        // For scene entities
         else if (domain === 'scene') {
             service = "turn_on";
             serviceData = { entity_id: entityId };
         }
-        // For script entities
         else if (domain === 'script') {
             service = "turn_on";
             serviceData = { entity_id: entityId };
         }
-        // For cover entities (garage doors, blinds)
         else if (domain === 'cover') {
             service = isOn ? "close_cover" : "open_cover";
             serviceData = { entity_id: entityId };
         }
-        // For input_boolean entities
         else if (domain === 'input_boolean') {
             service = isOn ? "turn_off" : "turn_on";
             serviceData = { entity_id: entityId };
         }
-        // For fan entities
         else if (domain === 'fan') {
             service = isOn ? "turn_off" : "turn_on";
             serviceData = { entity_id: entityId };
         }
-        // Default to light domain
         else {
             service = isOn ? "turn_off" : "turn_on";
             serviceData = { entity_id: entityId };
@@ -1053,14 +1285,11 @@ document.addEventListener("DOMContentLoaded", () => {
             service_data: serviceData
         }));
 
-        // Update UI optimistically
         updateLightUI(buttonId, !isOn);
 
-        // Update footer
         updateFooter(`${light.name} is ${!isOn ? 'on' : 'off'}`);
     }
 
-    // Helper function to extract domain from entity ID
     function getDomainFromEntityId(entityId) {
         if (!entityId) return 'light';
 
@@ -1068,7 +1297,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return parts.length > 0 ? parts[0] : 'light';
     }
 
-    // Update light UI
     function updateLightUI(buttonId, isOn) {
         const btn = document.getElementById(buttonId);
         if (!btn) return;
@@ -1078,14 +1306,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!light) return;
 
-        // Determine entity type
         const domain = getDomainFromEntityId(light.entityId);
 
         if (isOn) {
             btn.classList.add('on');
             btn.classList.remove('off');
 
-            // Add appropriate icon classes based on domain
             if (domain === 'cover') {
                 icon.classList.add('fa-door-open');
             } else if (domain === 'fan') {
@@ -1097,7 +1323,6 @@ document.addEventListener("DOMContentLoaded", () => {
             btn.classList.remove('on');
             btn.classList.add('off');
 
-            // Remove appropriate icon classes
             if (domain === 'cover') {
                 icon.classList.remove('fa-door-open');
                 icon.classList.add('fa-door-closed');
@@ -1111,15 +1336,11 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.disabled = false;
     }
 
-    // Window resize handler
     window.addEventListener("resize", () => {
-        // Store current scale before reset
         const oldScale = scale;
 
-        // Reinitialize image
         initImage();
 
-        // If we were zoomed in, maintain some zoom level
         if (oldScale > 1.5) {
             scale = Math.min(oldScale, maxScale);
             applyTransform();
@@ -1128,9 +1349,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updateButtonPositions();
     });
 
-    // Enhanced mobile zoom prevention
     function setupMobileZoomPrevention() {
-        // Prevent double-tap zoom
         let lastTap = 0;
         container.addEventListener('touchend', (e) => {
             const currentTime = new Date().getTime();
@@ -1144,46 +1363,49 @@ document.addEventListener("DOMContentLoaded", () => {
             lastTap = currentTime;
         }, { passive: false });
 
-        // Additional zoom prevention
         document.addEventListener('touchmove', (e) => {
             if (e.scale !== 1) {
                 e.preventDefault();
             }
         }, { passive: false });
     }
-
-    // Initialize everything
     function init() {
-        // Initialize buttons module first
+        // Load slider values FIRST
+        loadSliderValues();
+
+        // Initialize modules
         buttons.init(pan, getImageMetadata, {
             toggleLight: toggleLight,
             updateBrightness: updateBrightness
         });
 
-        // Initialize dimmer module if available
         if (window.DimmerModule && DimmerModule.init) {
             DimmerModule.init({
                 updateBrightness: updateBrightness
             });
         }
 
+        // Initialize image and UI
         initImage();
         setupMobileZoomPrevention();
         setupEventListeners();
 
-        // Load priority:
-        // 1. Try to load from localStorage first (user's saved state)
-        // 2. If nothing in localStorage, automatically load from DEFAULT_LOAD_FILE
-        if (!loadFromStorage()) {
-            console.log('No localStorage found, loading default design from load.json...');
-            showNotification('Loading default design...', 'info');
+        // Apply modal opacity immediately (using loaded value)
+        if (modalOpacity) {
+            const initialModalOpacity = parseFloat(modalOpacity.value) || 1;
+            applyModalOpacity(initialModalOpacity);
+        }
 
-            // Automatically load from default load.json file
-            loadDesignFromURL(DEFAULT_LOAD_FILE).then(() => {
-                console.log('Default design loaded from load.json');
-            }).catch((error) => {
-                console.log('No load.json found, starting with default image');
-                // If load.json doesn't exist, just use default image
+        // Apply button opacity immediately (using loaded value)
+        if (buttonOpacity) {
+            const initialButtonOpacity = parseFloat(buttonOpacity.value) || 1;
+            applyButtonOpacity(initialButtonOpacity);
+        }
+
+        // Load design
+        if (!loadFromStorage()) {
+            showNotification('Loading default design...', 'info');
+            loadDesignFromURL(DEFAULT_LOAD_FILE).catch(() => {
                 img.src = 'image.png';
                 updateFooter('Ready');
             });
@@ -1192,11 +1414,11 @@ document.addEventListener("DOMContentLoaded", () => {
         connectWebSocket();
     }
 
-    // Start the application
     init();
+    loadSliderValues();
+
 });
 
-// BLOCK ALL PAGE ZOOM EVENTS
 document.addEventListener("wheel", e => {
     if (e.ctrlKey) e.preventDefault();
 }, { passive: false });
@@ -1214,18 +1436,14 @@ function getDistance(t1, t2) {
     return Math.hypot(dx, dy);
 }
 
-// Keyboard shortcut for reset
 document.addEventListener('keydown', (e) => {
-    // Ctrl+R or Cmd+R for reset
     if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
-        e.preventDefault(); // Prevent page reload
-        // Reset view function is available in the main scope
+        e.preventDefault();
         if (window.resetViewHard) {
             window.resetViewHard();
             updateFooter('Reset (Ctrl+R)');
         }
     }
-    // ESC key for reset
     if (e.key === 'Escape' && !isEditMode) {
         if (window.resetViewHard) {
             window.resetViewHard();
@@ -1234,24 +1452,20 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Double-tap to reset on mobile
 let lastTapTime = 0;
 if (container) {
     container.addEventListener('touchend', (e) => {
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTapTime;
 
-        // Double-tap detection (300ms threshold)
         if (tapLength < 300 && tapLength > 0) {
             e.preventDefault();
             e.stopPropagation();
 
-            // Double-tap to reset
             if (window.resetViewHard) {
                 window.resetViewHard();
             }
 
-            // Visual feedback
             container.style.backgroundColor = 'rgba(76, 175, 80, 0.2)';
             setTimeout(() => {
                 container.style.backgroundColor = '';
@@ -1263,3 +1477,18 @@ if (container) {
         lastTapTime = currentTime;
     }, { passive: false });
 }
+
+// Add this to main.js
+window.addEventListener('beforeunload', () => {
+    saveSliderValues();
+});
+
+// Also save when leaving edit mode
+const originalEditBtnHandler = editBtn.onclick;
+editBtn.addEventListener('click', function () {
+    setTimeout(() => {
+        if (!isEditMode) {
+            saveSliderValues();
+        }
+    }, 100);
+});

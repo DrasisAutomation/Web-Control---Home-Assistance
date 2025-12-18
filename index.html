@@ -11,24 +11,41 @@
 
 <body>
     <!-- Your existing HTML structure remains the same -->
-    <div class="header" style="display: none;">
-        Home Automation
+    <div class="header">
         <button class="edit-btn" id="editBtn">✎ Edit</button>
         <button class="header-control save-btn" id="saveBtn">💾 Save</button>
         <button id="clearAllBtn" class="header-control clear-all-btn"
-            title="Clear all buttons, entities, and local storage">🗑️ Clear All</button>
-        <div class="edit-controls" id="editControls">
-            <button class="header-control small-btn" id="imageBtn" title="Change Image">
-                <i class="fas fa-image"></i>
-            </button>
-            <button class="header-control small-btn" id="addBtn" title="Add Button">
-                <i class="fas fa-plus"></i>
-            </button>
-        </div>
+            title="Clear all buttons, entities, and local storage">🗑️ Clear</button>
+<!-- Replace the edit-controls div in index.html with this: -->
+<div class="edit-controls" id="editControls">
+    <div class="range-control">
+        <label for="buttonSize">Size:</label>
+        <input type="range" id="buttonSize" min="0.5" max="2" step="0.1" value="1">
+        <span class="range-value" id="sizeValue">100%</span>
+    </div>
+    
+    <div class="range-control">
+        <label for="buttonOpacity">Opacity:</label>
+        <input type="range" id="buttonOpacity" min="0.5" max="1" step="0.1" value="0.8">
+        <span class="range-value" id="opacityValue">80%</span>
+    </div>
+    
+    <div class="range-control">
+        <label for="modalOpacity">Modal:</label>
+        <input type="range" id="modalOpacity" min="0.5" max="1" step="0.1" value="0.6">
+        <span class="range-value" id="modalValue">60%</span>
+    </div>
+    
+    <button class="header-control small-btn" id="imageBtn" title="Change Image">
+        <i class="fas fa-image"></i>
+    </button>
+    <button class="header-control small-btn" id="addBtn" title="Add Button">
+        <i class="fas fa-plus"></i>
+    </button>
+</div>
     </div>
 
     <div class="content" id="container">
-        <button class="reset-btn" id="resetBtn">↺</button>
 
         <div class="viewer-center">
             <div class="pan-layer" id="panLayer">
@@ -39,7 +56,7 @@
 
     <div class="footer">
         Ready
-        <button class="footer-control load-btn" id="loadBtn">📂 Load..</button>
+        <button class="footer-control load-btn" id="loadBtn">📂</button>
     </div>
 
     <!-- Hidden file inputs -->
