@@ -1,3 +1,4 @@
+// main.js - Updated with CCT and RGB support
 document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener('gesturestart', e => e.preventDefault());
     document.addEventListener('gesturechange', e => e.preventDefault());
@@ -23,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const modalOpacity = document.getElementById('modalOpacity');
     const modalValue = document.getElementById('modalValue');
 
-    const STORAGE_KEY = 'floorplan_design_v1.1';
+    const STORAGE_KEY = 'floorplan_design_v2.0';
     const DEFAULT_LOAD_FILE = 'load.json';
 
     let scale = 1;
@@ -138,6 +139,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (window.DimmerModule && DimmerModule.updatePositions) {
             DimmerModule.updatePositions();
+        }
+        if (window.CCTModule && CCTModule.updatePositions) {
+            CCTModule.updatePositions();
+        }
+        if (window.RGBModule && RGBModule.updatePositions) {
+            RGBModule.updatePositions();
         }
     }
 
@@ -264,6 +271,66 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Update CCT (Color Temperature)
+    function updateCCT(entityId, brightness, temperature, buttonId) {
+        if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        const domain = getDomainFromEntityId(entityId);
+
+        if (domain === 'light') {
+            const haBrightness = Math.round((brightness / 100) * 255);
+            
+            // Convert percentage to mireds (153-500 range)
+            // 0% = 6500K (153 mireds), 100% = 2000K (500 mireds)
+            const minMireds = 153;
+            const maxMireds = 500;
+            const mireds = Math.round(minMireds + (maxMireds - minMireds) * (temperature / 100));
+
+            ws.send(JSON.stringify({
+                id: Date.now(),
+                type: "call_service",
+                domain: "light",
+                service: "turn_on",
+                service_data: {
+                    entity_id: entityId,
+                    brightness: haBrightness,
+                    color_temp: mireds
+                }
+            }));
+
+            updateFooter(`CCT updated to ${brightness}% brightness, ${temperature}% temperature`);
+        }
+    }
+
+    // Update RGB Color
+    function updateRGB(entityId, brightness, hue, buttonId) {
+        if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        const domain = getDomainFromEntityId(entityId);
+
+        if (domain === 'light') {
+            const haBrightness = Math.round((brightness / 100) * 255);
+
+            ws.send(JSON.stringify({
+                id: Date.now(),
+                type: "call_service",
+                domain: "light",
+                service: "turn_on",
+                service_data: {
+                    entity_id: entityId,
+                    brightness: haBrightness,
+                    hs_color: [hue, 100]
+                }
+            }));
+
+            updateFooter(`RGB updated to ${brightness}% brightness, hue: ${hue}°`);
+        }
+    }
+
     function saveDesign() {
         console.log('Saving design...');
 
@@ -288,9 +355,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         localStorage.setItem('sliderValues', JSON.stringify(sliderValues));
 
-        // Get all buttons
+        // Get all buttons from all modules
         const allButtons = buttons.getButtons();
         const dimmerButtons = window.DimmerModule ? DimmerModule.getDimmerButtons() : [];
+        const cctButtons = window.CCTModule ? CCTModule.getCCTButtons() : [];
+        const rgbButtons = window.RGBModule ? RGBModule.getRGBButtons() : [];
 
         // Create unified buttons array
         const unifiedButtons = [];
@@ -329,6 +398,44 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
+        // Add CCT buttons
+        cctButtons.forEach(cct => {
+            if (cct && cct.id) {
+                unifiedButtons.push({
+                    id: cct.id,
+                    type: 'cct',
+                    entityId: cct.entityId || '',
+                    name: cct.name || 'CCT Light',
+                    iconClass: cct.iconClass || 'fa-lightbulb',
+                    position: {
+                        x: cct.position ? Number(cct.position.x.toFixed(4)) : 0.5,
+                        y: cct.position ? Number(cct.position.y.toFixed(4)) : 0.5
+                    },
+                    brightness: cct.brightness || 50,
+                    temperature: cct.temperature || 50
+                });
+            }
+        });
+
+        // Add RGB buttons
+        rgbButtons.forEach(rgb => {
+            if (rgb && rgb.id) {
+                unifiedButtons.push({
+                    id: rgb.id,
+                    type: 'rgb',
+                    entityId: rgb.entityId || '',
+                    name: rgb.name || 'RGB Light',
+                    iconClass: rgb.iconClass || 'fa-lightbulb',
+                    position: {
+                        x: rgb.position ? Number(rgb.position.x.toFixed(4)) : 0.5,
+                        y: rgb.position ? Number(rgb.position.y.toFixed(4)) : 0.5
+                    },
+                    brightness: rgb.brightness || 50,
+                    hue: rgb.hue || 180
+                });
+            }
+        });
+
         // Get image metadata
         const imageMeta = getImageMetadata();
 
@@ -336,7 +443,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const designData = {
             meta: {
                 savedAt: new Date().toISOString(),
-                version: '1.4',
+                version: '2.0',
                 totalButtons: unifiedButtons.length
             },
             settings: {
@@ -445,6 +552,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 DimmerModule.getDimmerButtons().length = 0;
             }
 
+            if (window.CCTModule && CCTModule.getCCTButtons) {
+                CCTModule.getCCTButtons().length = 0;
+            }
+
+            if (window.RGBModule && RGBModule.getRGBButtons) {
+                RGBModule.getRGBButtons().length = 0;
+            }
+
             // Remove all button elements
             document.querySelectorAll('.light-button').forEach(btn => btn.remove());
 
@@ -527,8 +642,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         type: buttonConfig.type || 'toggle',
                         entityId: buttonConfig.entityId || '',
                         name: buttonConfig.name || '',
-                        iconClass: buttonConfig.iconClass || (buttonConfig.type === 'dimmer' ? 'fa-sliders-h' : 'fa-lightbulb'),
-                        position: buttonConfig.position || { x: 0.5, y: 0.5 }
+                        iconClass: buttonConfig.iconClass || 'fa-lightbulb',
+                        position: buttonConfig.position || { x: 0.5, y: 0.5 },
+                        brightness: buttonConfig.brightness || 50,
+                        temperature: buttonConfig.temperature || 50,
+                        hue: buttonConfig.hue || 180
                     };
 
                     console.log(`Creating button ${index}:`, cleanConfig);
@@ -537,6 +655,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (cleanConfig.type === 'dimmer') {
                         if (window.DimmerModule && DimmerModule.create) {
                             DimmerModule.create(cleanConfig);
+                        }
+                    } else if (cleanConfig.type === 'cct') {
+                        if (window.CCTModule && CCTModule.create) {
+                            CCTModule.create(cleanConfig);
+                        }
+                    } else if (cleanConfig.type === 'rgb') {
+                        if (window.RGBModule && RGBModule.create) {
+                            RGBModule.create(cleanConfig);
                         }
                     } else {
                         buttons.create(cleanConfig);
@@ -561,7 +687,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }));
             }
 
-            updateFooter("Design loaded with saved settings!");
+            updateFooter("Design loaded");
         }
 
         // Handle image loading
@@ -605,6 +731,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return true;
         });
     }
+    
     function clearAll() {
         if (!confirm("Are you sure you want to clear all buttons and reset the design? This action cannot be undone.")) {
             return;
@@ -641,6 +768,20 @@ document.addEventListener("DOMContentLoaded", () => {
             const allDimmers = DimmerModule.getDimmerButtons();
             allDimmers.forEach(dimmer => {
                 DimmerModule.deleteButton(dimmer.id);
+            });
+        }
+
+        if (window.CCTModule && CCTModule.getCCTButtons) {
+            const allCCTs = CCTModule.getCCTButtons();
+            allCCTs.forEach(cct => {
+                CCTModule.deleteButton(cct.id);
+            });
+        }
+
+        if (window.RGBModule && RGBModule.getRGBButtons) {
+            const allRGBs = RGBModule.getRGBButtons();
+            allRGBs.forEach(rgb => {
+                RGBModule.deleteButton(rgb.id);
             });
         }
     }
@@ -782,7 +923,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-
     function applyModalOpacity(opacityValue) {
         const opacity = parseFloat(opacityValue);
 
@@ -791,8 +931,6 @@ document.addEventListener("DOMContentLoaded", () => {
             opacity
         );
     }
-
-
 
     function applyButtonOpacity(opacityValue) {
         const opacity = parseFloat(opacityValue);
@@ -818,7 +956,6 @@ document.addEventListener("DOMContentLoaded", () => {
             opacityValue.textContent = `${Math.round(opacity * 100)}%`;
         }
     }
-
 
     function setupEventListeners() {
         container.addEventListener('touchstart', (e) => {
@@ -920,6 +1057,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (window.DimmerModule && DimmerModule.enableEditMode) {
                     DimmerModule.enableEditMode(true);
                 }
+                if (window.CCTModule && CCTModule.enableEditMode) {
+                    CCTModule.enableEditMode(true);
+                }
+                if (window.RGBModule && RGBModule.enableEditMode) {
+                    RGBModule.enableEditMode(true);
+                }
             } else {
                 editBtn.textContent = '✎ Edit';
                 editBtn.classList.remove('edit-mode');
@@ -932,6 +1075,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 buttons.enableEditMode(false);
                 if (window.DimmerModule && DimmerModule.enableEditMode) {
                     DimmerModule.enableEditMode(false);
+                }
+                if (window.CCTModule && CCTModule.enableEditMode) {
+                    CCTModule.enableEditMode(false);
+                }
+                if (window.RGBModule && RGBModule.enableEditMode) {
+                    RGBModule.enableEditMode(false);
                 }
             }
         });
@@ -1029,6 +1178,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
     }
+    
     document.getElementById("buttonEditForm").addEventListener("submit", function (e) {
         e.preventDefault();
 
@@ -1048,11 +1198,34 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        buttons.updateButtonConfig(btnId, {
-            entityId: entityId,
-            name: name || 'Button',
-            iconClass: icon
-        });
+        // Determine which module to update based on button type
+        const buttonType = getButtonType(btnId);
+        
+        if (buttonType === 'dimmer' && window.DimmerModule) {
+            DimmerModule.updateConfig(btnId, {
+                entityId: entityId,
+                name: name || 'Dimmer',
+                iconClass: icon
+            });
+        } else if (buttonType === 'cct' && window.CCTModule) {
+            CCTModule.updateConfig(btnId, {
+                entityId: entityId,
+                name: name || 'CCT Light',
+                iconClass: icon
+            });
+        } else if (buttonType === 'rgb' && window.RGBModule) {
+            RGBModule.updateConfig(btnId, {
+                entityId: entityId,
+                name: name || 'RGB Light',
+                iconClass: icon
+            });
+        } else {
+            buttons.updateButtonConfig(btnId, {
+                entityId: entityId,
+                name: name || 'Button',
+                iconClass: icon
+            });
+        }
 
         document.getElementById("buttonEditModal").style.display = "none";
 
@@ -1061,7 +1234,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('closeEditBtn')?.addEventListener('click', () => {
         document.getElementById('buttonEditModal').style.display = 'none';
-        editingButtonId = null;
         if (window.buttons) {
             window.buttons.setEditingButtonId(null);
         }
@@ -1071,7 +1243,6 @@ document.addEventListener("DOMContentLoaded", () => {
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) {
                 overlay.style.display = 'none';
-                editingButtonId = null;
                 if (window.buttons) {
                     window.buttons.setEditingButtonId(null);
                 }
@@ -1110,113 +1281,242 @@ document.addEventListener("DOMContentLoaded", () => {
             else if (data.type === "result" && Array.isArray(data.result)) {
                 const states = data.result;
 
-                buttons.getButtons().forEach(button => {
-                    const st = states.find(s => s.entity_id === button.entityId);
-                    if (st) {
-                        updateLightUI(button.id, st.state === "on" || st.state === "open" || st.state === "playing");
-
-                        const domain = getDomainFromEntityId(button.entityId);
-
-                        if (domain === 'light' || domain === 'fan') {
-                            const brightness = st.attributes?.brightness || st.attributes?.percentage;
-                            if (brightness !== undefined) {
-                                let brightnessPercent;
-                                if (domain === 'light') {
-                                    brightnessPercent = Math.round((brightness / 255) * 100);
-                                } else {
-                                    brightnessPercent = brightness;
-                                }
-
-                                if (window.DimmerModule && DimmerModule.handleStateUpdate) {
-                                    DimmerModule.handleStateUpdate(
-                                        button.entityId,
-                                        st.state,
-                                        brightnessPercent
-                                    );
-                                }
-                            }
-                        }
-                    }
-                });
-
-                if (window.DimmerModule && DimmerModule.getDimmerButtons) {
-                    DimmerModule.getDimmerButtons().forEach(dimmer => {
-                        const st = states.find(s => s.entity_id === dimmer.entityId);
-                        if (st) {
-                            const brightness = st.attributes?.brightness;
-                            const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
-                            DimmerModule.handleStateUpdate(
-                                dimmer.entityId,
-                                st.state,
-                                brightnessPercent
-                            );
-                        }
-                    });
-                }
+                // Update all buttons based on state
+                updateAllButtonsFromState(states);
             }
             else if (data.type === "event" && data.event?.event_type === "state_changed") {
                 const entityId = data.event.data.entity_id;
                 const newState = data.event.data.new_state;
 
-                const allLights = buttons.getButtons().filter(l => l.entityId === entityId);
-                allLights.forEach(light => {
-                    updateLightUI(light.id, newState.state === "on");
+                // Update specific button based on state change
+                updateButtonFromStateChange(entityId, newState);
+            }
+        };
 
-                    if (light.type === 'dimmer') {
-                        const brightness = newState.attributes?.brightness;
-                        const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
+        ws.onerror = (error) => {
+            disableAllButtons();
+        };
+
+        ws.onclose = () => {
+            disableAllButtons();
+            ready = false;
+            setTimeout(connectWebSocket, 3000);
+        };
+    }
+
+    function updateAllButtonsFromState(states) {
+        // Update regular buttons
+        buttons.getButtons().forEach(button => {
+            const st = states.find(s => s.entity_id === button.entityId);
+            if (st) {
+                updateLightUI(button.id, st.state === "on" || st.state === "open" || st.state === "playing");
+
+                const domain = getDomainFromEntityId(button.entityId);
+
+                if (domain === 'light' || domain === 'fan') {
+                    const brightness = st.attributes?.brightness || st.attributes?.percentage;
+                    if (brightness !== undefined) {
+                        let brightnessPercent;
+                        if (domain === 'light') {
+                            brightnessPercent = Math.round((brightness / 255) * 100);
+                        } else {
+                            brightnessPercent = brightness;
+                        }
+
+                        // Update dimmer module
                         if (window.DimmerModule && DimmerModule.handleStateUpdate) {
                             DimmerModule.handleStateUpdate(
-                                entityId,
-                                newState.state,
+                                button.entityId,
+                                st.state,
                                 brightnessPercent
                             );
                         }
-                    }
-                });
 
-                if (window.DimmerModule && DimmerModule.handleStateUpdate) {
-                    const brightness = newState.attributes?.brightness;
+                        // Update CCT module if color temp exists
+                        if (st.attributes?.color_temp) {
+                            if (window.CCTModule && CCTModule.handleStateUpdate) {
+                                CCTModule.handleStateUpdate(
+                                    button.entityId,
+                                    st.state,
+                                    brightnessPercent,
+                                    st.attributes.color_temp
+                                );
+                            }
+                        }
+
+                        // Update RGB module if hs_color exists
+                        if (st.attributes?.hs_color) {
+                            if (window.RGBModule && RGBModule.handleStateUpdate) {
+                                RGBModule.handleStateUpdate(
+                                    button.entityId,
+                                    st.state,
+                                    brightnessPercent,
+                                    st.attributes.hs_color
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Update dimmer buttons
+        if (window.DimmerModule && DimmerModule.getDimmerButtons) {
+            DimmerModule.getDimmerButtons().forEach(dimmer => {
+                const st = states.find(s => s.entity_id === dimmer.entityId);
+                if (st) {
+                    const brightness = st.attributes?.brightness;
                     const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
+                    DimmerModule.handleStateUpdate(
+                        dimmer.entityId,
+                        st.state,
+                        brightnessPercent
+                    );
+                }
+            });
+        }
+
+        // Update CCT buttons
+        if (window.CCTModule && CCTModule.getCCTButtons) {
+            CCTModule.getCCTButtons().forEach(cct => {
+                const st = states.find(s => s.entity_id === cct.entityId);
+                if (st) {
+                    const brightness = st.attributes?.brightness;
+                    const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
+                    const colorTemp = st.attributes?.color_temp;
+                    CCTModule.handleStateUpdate(
+                        cct.entityId,
+                        st.state,
+                        brightnessPercent,
+                        colorTemp
+                    );
+                }
+            });
+        }
+
+        // Update RGB buttons
+        if (window.RGBModule && RGBModule.getRGBButtons) {
+            RGBModule.getRGBButtons().forEach(rgb => {
+                const st = states.find(s => s.entity_id === rgb.entityId);
+                if (st) {
+                    const brightness = st.attributes?.brightness;
+                    const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
+                    const hsColor = st.attributes?.hs_color;
+                    RGBModule.handleStateUpdate(
+                        rgb.entityId,
+                        st.state,
+                        brightnessPercent,
+                        hsColor
+                    );
+                }
+            });
+        }
+    }
+
+    function updateButtonFromStateChange(entityId, newState) {
+        const allLights = buttons.getButtons().filter(l => l.entityId === entityId);
+        allLights.forEach(light => {
+            updateLightUI(light.id, newState.state === "on");
+
+            if (light.type === 'dimmer') {
+                const brightness = newState.attributes?.brightness;
+                const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
+                if (window.DimmerModule && DimmerModule.handleStateUpdate) {
                     DimmerModule.handleStateUpdate(
                         entityId,
                         newState.state,
                         brightnessPercent
                     );
                 }
+            } else if (light.type === 'cct') {
+                const brightness = newState.attributes?.brightness;
+                const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
+                const colorTemp = newState.attributes?.color_temp;
+                if (window.CCTModule && CCTModule.handleStateUpdate) {
+                    CCTModule.handleStateUpdate(
+                        entityId,
+                        newState.state,
+                        brightnessPercent,
+                        colorTemp
+                    );
+                }
+            } else if (light.type === 'rgb') {
+                const brightness = newState.attributes?.brightness;
+                const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
+                const hsColor = newState.attributes?.hs_color;
+                if (window.RGBModule && RGBModule.handleStateUpdate) {
+                    RGBModule.handleStateUpdate(
+                        entityId,
+                        newState.state,
+                        brightnessPercent,
+                        hsColor
+                    );
+                }
             }
-        };
+        });
 
-        ws.onerror = (error) => {
-            buttons.getButtons().forEach(light => {
-                const btn = document.getElementById(light.id);
+        // Also update module-specific buttons
+        if (window.DimmerModule && DimmerModule.handleStateUpdate) {
+            const brightness = newState.attributes?.brightness;
+            const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
+            DimmerModule.handleStateUpdate(
+                entityId,
+                newState.state,
+                brightnessPercent
+            );
+        }
+
+        if (window.CCTModule && CCTModule.handleStateUpdate) {
+            const brightness = newState.attributes?.brightness;
+            const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
+            const colorTemp = newState.attributes?.color_temp;
+            CCTModule.handleStateUpdate(
+                entityId,
+                newState.state,
+                brightnessPercent,
+                colorTemp
+            );
+        }
+
+        if (window.RGBModule && RGBModule.handleStateUpdate) {
+            const brightness = newState.attributes?.brightness;
+            const brightnessPercent = brightness ? Math.round((brightness / 255) * 100) : 0;
+            const hsColor = newState.attributes?.hs_color;
+            RGBModule.handleStateUpdate(
+                entityId,
+                newState.state,
+                brightnessPercent,
+                hsColor
+            );
+        }
+    }
+
+    function disableAllButtons() {
+        buttons.getButtons().forEach(light => {
+            const btn = document.getElementById(light.id);
+            if (btn) btn.disabled = true;
+        });
+
+        if (window.DimmerModule && DimmerModule.getDimmerButtons) {
+            DimmerModule.getDimmerButtons().forEach(dimmer => {
+                const btn = document.getElementById(dimmer.id);
                 if (btn) btn.disabled = true;
             });
+        }
 
-            if (window.DimmerModule && DimmerModule.getDimmerButtons) {
-                DimmerModule.getDimmerButtons().forEach(dimmer => {
-                    const btn = document.getElementById(dimmer.id);
-                    if (btn) btn.disabled = true;
-                });
-            }
-        };
-
-        ws.onclose = () => {
-            buttons.getButtons().forEach(light => {
-                const btn = document.getElementById(light.id);
+        if (window.CCTModule && CCTModule.getCCTButtons) {
+            CCTModule.getCCTButtons().forEach(cct => {
+                const btn = document.getElementById(cct.id);
                 if (btn) btn.disabled = true;
             });
+        }
 
-            if (window.DimmerModule && DimmerModule.getDimmerButtons) {
-                DimmerModule.getDimmerButtons().forEach(dimmer => {
-                    const btn = document.getElementById(dimmer.id);
-                    if (btn) btn.disabled = true;
-                });
-            }
-
-            ready = false;
-            setTimeout(connectWebSocket, 3000);
-        };
+        if (window.RGBModule && RGBModule.getRGBButtons) {
+            RGBModule.getRGBButtons().forEach(rgb => {
+                const btn = document.getElementById(rgb.id);
+                if (btn) btn.disabled = true;
+            });
+        }
     }
 
     function toggleLight(entityId, buttonId) {
@@ -1234,13 +1534,25 @@ document.addEventListener("DOMContentLoaded", () => {
         const btn = document.getElementById(buttonId);
         const isOn = btn.classList.contains('on');
 
+        // Handle special button types that open modals instead of toggling
         if (light.type === 'dimmer') {
             if (window.DimmerModule && DimmerModule.openDimmerModal) {
                 DimmerModule.openDimmerModal(light);
             }
             return;
+        } else if (light.type === 'cct') {
+            if (window.CCTModule && CCTModule.openCCTModal) {
+                CCTModule.openCCTModal(light);
+            }
+            return;
+        } else if (light.type === 'rgb') {
+            if (window.RGBModule && RGBModule.openRGBModal) {
+                RGBModule.openRGBModal(light);
+            }
+            return;
         }
 
+        // Handle regular toggle buttons
         const domain = getDomainFromEntityId(entityId);
         let service, serviceData;
 
@@ -1295,6 +1607,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const parts = entityId.split('.');
         return parts.length > 0 ? parts[0] : 'light';
+    }
+
+    function getButtonType(buttonId) {
+        const btn = document.getElementById(buttonId);
+        if (!btn) return 'toggle';
+        
+        if (btn.classList.contains('dimmer')) return 'dimmer';
+        if (btn.classList.contains('cct')) return 'cct';
+        if (btn.classList.contains('rgb')) return 'rgb';
+        return 'toggle';
     }
 
     function updateLightUI(buttonId, isOn) {
@@ -1369,11 +1691,12 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }, { passive: false });
     }
+    
     function init() {
         // Load slider values FIRST
         loadSliderValues();
 
-        // Initialize modules
+        // Initialize modules with callbacks
         buttons.init(pan, getImageMetadata, {
             toggleLight: toggleLight,
             updateBrightness: updateBrightness
@@ -1382,6 +1705,18 @@ document.addEventListener("DOMContentLoaded", () => {
         if (window.DimmerModule && DimmerModule.init) {
             DimmerModule.init({
                 updateBrightness: updateBrightness
+            });
+        }
+
+        if (window.CCTModule && CCTModule.init) {
+            CCTModule.init({
+                updateCCT: updateCCT
+            });
+        }
+
+        if (window.RGBModule && RGBModule.init) {
+            RGBModule.init({
+                updateRGB: updateRGB
             });
         }
 
@@ -1453,6 +1788,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 let lastTapTime = 0;
+const container = document.getElementById("container");
 if (container) {
     container.addEventListener('touchend', (e) => {
         const currentTime = new Date().getTime();
@@ -1484,11 +1820,13 @@ window.addEventListener('beforeunload', () => {
 });
 
 // Also save when leaving edit mode
-const originalEditBtnHandler = editBtn.onclick;
-editBtn.addEventListener('click', function () {
-    setTimeout(() => {
-        if (!isEditMode) {
-            saveSliderValues();
-        }
-    }, 100);
-});
+const editBtn = document.getElementById('editBtn');
+if (editBtn) {
+    editBtn.addEventListener('click', function () {
+        setTimeout(() => {
+            if (!window.isEditMode) {
+                saveSliderValues();
+            }
+        }, 100);
+    });
+}

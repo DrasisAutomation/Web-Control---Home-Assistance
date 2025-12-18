@@ -1,4 +1,4 @@
-// buttons.js - Button management module
+// buttons.js - Button management module with CCT and RGB support
 window.buttons = (function () {
     // Internal state
     let lightButtons = [];
@@ -33,6 +33,18 @@ window.buttons = (function () {
             icon: 'fa-sliders-h',
             defaultName: 'Dimmer',
             type: 'dimmer'
+        },
+        cct: {
+            name: 'CCT Light',
+            icon: 'fa-lightbulb',
+            defaultName: 'CCT Light',
+            type: 'cct'
+        },
+        rgb: {
+            name: 'RGB Light',
+            icon: 'fa-lightbulb',
+            defaultName: 'RGB Light',
+            type: 'rgb'
         }
     };
 
@@ -83,26 +95,25 @@ window.buttons = (function () {
     }
 
     // Toggle edit mode
-// In button.js, update the enableEditMode function:
+    function enableEditMode(flag) {
+        isEditMode = flag;
 
-function enableEditMode(flag) {
-    isEditMode = flag;
-
-    // Update all buttons' edit mode state
-    lightButtons.forEach(button => {
-        const btn = document.getElementById(button.id);
-        if (btn) {
-            if (flag) {
-                btn.classList.add('edit-mode');
-                btn.style.cursor = 'grab';
-            } else {
-                btn.classList.remove('edit-mode');
-                btn.style.cursor = '';
-                saveToLocalStorage();
+        // Update all buttons' edit mode state
+        lightButtons.forEach(button => {
+            const btn = document.getElementById(button.id);
+            if (btn) {
+                if (flag) {
+                    btn.classList.add('edit-mode');
+                    btn.style.cursor = 'grab';
+                } else {
+                    btn.classList.remove('edit-mode');
+                    btn.style.cursor = '';
+                    saveToLocalStorage();
+                }
             }
-        }
-    });
-}
+        });
+    }
+    
     // Create a new button
     function create(config) {
         // Generate unique ID if not provided
@@ -127,28 +138,27 @@ function enableEditMode(flag) {
         return config.id;
     }
 
-function save() {
-    const imageMeta = getImageMetaFn ? getImageMetaFn() : {};
+    function save() {
+        const imageMeta = getImageMetaFn ? getImageMetaFn() : {};
 
-    const cleanButtons = lightButtons.map(b => ({
-        id: b.id,
-        type: b.type,
-        entityId: b.entityId || '',
-        name: b.name || '',
-        iconClass: b.iconClass || '',
-        position: {
-            x: Number(b.position.x.toFixed(4)),
-            y: Number(b.position.y.toFixed(4))
-        }
-    }));
+        const cleanButtons = lightButtons.map(b => ({
+            id: b.id,
+            type: b.type,
+            entityId: b.entityId || '',
+            name: b.name || '',
+            iconClass: b.iconClass || '',
+            position: {
+                x: Number(b.position.x.toFixed(4)),
+                y: Number(b.position.y.toFixed(4))
+            }
+        }));
 
-    return {
-        image: imageMeta.src || '',
-        transform: imageMeta.transform || {},
-        buttons: cleanButtons
-    };
-}
-
+        return {
+            image: imageMeta.src || '',
+            transform: imageMeta.transform || {},
+            buttons: cleanButtons
+        };
+    }
 
     // Load from data
     function load(data) {
@@ -175,77 +185,76 @@ function save() {
     }
 
     // Update button configuration
-function updateButtonConfig(buttonId, newConfig) {
-    const index = lightButtons.findIndex(b => b.id === buttonId);
-    if (index === -1) return false;
+    function updateButtonConfig(buttonId, newConfig) {
+        const index = lightButtons.findIndex(b => b.id === buttonId);
+        if (index === -1) return false;
 
-    const buttonData = lightButtons[index];
-    const oldEntityId = buttonData.entityId;
+        const buttonData = lightButtons[index];
+        const oldEntityId = buttonData.entityId;
 
-    // ✅ Update stored data
-    Object.assign(buttonData, newConfig);
+        // ✅ Update stored data
+        Object.assign(buttonData, newConfig);
 
-    const btn = document.getElementById(buttonId);
-    if (!btn) return false;
+        const btn = document.getElementById(buttonId);
+        if (!btn) return false;
 
-    /* ---------- ICON UPDATE ---------- */
-    if (newConfig.iconClass) {
-        const icon = btn.querySelector('.icon');
-        icon.className = `icon fas ${newConfig.iconClass}`;
-    }
-
-    /* ---------- NAME UPDATE ---------- */
-    if (newConfig.name) {
-        btn.dataset.name = newConfig.name;
-        btn.title = newConfig.name; // tooltip
-    }
-
-    /* ---------- ENTITY UPDATE (CRITICAL FIX) ---------- */
-    if (newConfig.entityId && newConfig.entityId !== oldEntityId) {
-
-        // Remove from old entity group
-        if (oldEntityId && window.EntityButtons?.[oldEntityId]) {
-            window.EntityButtons[oldEntityId] =
-                window.EntityButtons[oldEntityId].filter(b => b.id !== buttonId);
+        /* ---------- ICON UPDATE ---------- */
+        if (newConfig.iconClass) {
+            const icon = btn.querySelector('.icon');
+            icon.className = `icon fas ${newConfig.iconClass}`;
         }
 
-        // Add to new entity group
-        if (!window.EntityButtons) window.EntityButtons = {};
-        if (!window.EntityButtons[newConfig.entityId]) {
-            window.EntityButtons[newConfig.entityId] = [];
+        /* ---------- NAME UPDATE ---------- */
+        if (newConfig.name) {
+            btn.dataset.name = newConfig.name;
+            btn.title = newConfig.name; // tooltip
         }
 
-        const entityButton = {
-            id: buttonId,
-            entityId: newConfig.entityId,
-            isOn: false,
-            updateUI() {
-                const el = document.getElementById(this.id);
-                if (!el) return;
-                el.classList.toggle('on', this.isOn);
-            },
-            handleStateUpdate(state) {
-                this.isOn = state === 'on';
-                this.updateUI();
+        /* ---------- ENTITY UPDATE (CRITICAL FIX) ---------- */
+        if (newConfig.entityId && newConfig.entityId !== oldEntityId) {
+
+            // Remove from old entity group
+            if (oldEntityId && window.EntityButtons?.[oldEntityId]) {
+                window.EntityButtons[oldEntityId] =
+                    window.EntityButtons[oldEntityId].filter(b => b.id !== buttonId);
             }
-        };
 
-        window.EntityButtons[newConfig.entityId].push(entityButton);
+            // Add to new entity group
+            if (!window.EntityButtons) window.EntityButtons = {};
+            if (!window.EntityButtons[newConfig.entityId]) {
+                window.EntityButtons[newConfig.entityId] = [];
+            }
 
-        // Update DOM dataset
-        btn.dataset.entityId = newConfig.entityId;
+            const entityButton = {
+                id: buttonId,
+                entityId: newConfig.entityId,
+                isOn: false,
+                updateUI() {
+                    const el = document.getElementById(this.id);
+                    if (!el) return;
+                    el.classList.toggle('on', this.isOn);
+                },
+                handleStateUpdate(state) {
+                    this.isOn = state === 'on';
+                    this.updateUI();
+                }
+            };
+
+            window.EntityButtons[newConfig.entityId].push(entityButton);
+
+            // Update DOM dataset
+            btn.dataset.entityId = newConfig.entityId;
+        }
+
+        saveToLocalStorage();
+
+        // Refresh HA state
+        if (window.ws?.readyState === WebSocket.OPEN) {
+            window.ws.send(JSON.stringify({ id: Date.now(), type: "get_states" }));
+        }
+
+        return true;
     }
-
-    saveToLocalStorage();
-
-    // Refresh HA state
-    if (window.ws?.readyState === WebSocket.OPEN) {
-        window.ws.send(JSON.stringify({ id: Date.now(), type: "get_states" }));
-    }
-
-    return true;
-}
-
 
     // Delete a button
     function deleteButton(buttonId) {
@@ -330,7 +339,6 @@ function updateButtonConfig(buttonId, newConfig) {
                 callbacks.toggleLight(currentEntity, config.id);
             }
         });
-
 
         // Mouse/touch down for drag and long press
         button.addEventListener('mousedown', (e) => startButtonInteraction(e, button, config));
@@ -497,20 +505,26 @@ function updateButtonConfig(buttonId, newConfig) {
     }
 
     // Show edit modal
-    // Show edit modal
-    function showEditModal(config) {
-        editingButtonId = config.id;
-        // Set the editing button ID so it's accessible to the modal
-        window.buttons.setEditingButtonId(config.id);
+// Show edit modal
+function showEditModal(config) {
+    editingButtonId = config.id;
+    // Set the editing button ID so it's accessible to the modal
+    window.buttons.setEditingButtonId(config.id);
+    
+    // Also set a global reference for other modules
+    window.currentEditingButton = {
+        id: config.id,
+        type: config.type || 'toggle'
+    };
 
-        // Fill form with current values
-        document.getElementById('editEntityId').value = config.entityId || '';
-        document.getElementById('editName').value = config.name || '';
-        document.getElementById('editIcon').value = config.iconClass || 'fa-lightbulb';
+    // Fill form with current values
+    document.getElementById('editEntityId').value = config.entityId || '';
+    document.getElementById('editName').value = config.name || '';
+    document.getElementById('editIcon').value = config.iconClass || 'fa-lightbulb';
 
-        // Show modal
-        document.getElementById('buttonEditModal').style.display = 'flex';
-    }
+    // Show modal
+    document.getElementById('buttonEditModal').style.display = 'flex';
+}
 
     // Set up modal listeners
     function setupModalListeners() {
@@ -525,7 +539,7 @@ function updateButtonConfig(buttonId, newConfig) {
             editingButtonId = null;
         });
 
-        // Button type selection
+        // Button type selection - UPDATED WITH CCT AND RGB
         document.querySelectorAll('.button-type-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -543,7 +557,7 @@ function updateButtonConfig(buttonId, newConfig) {
                     const name = prompt(`Enter name (optional):`, buttonType.defaultName) || buttonType.defaultName;
                     const position = { x: 0.5, y: 0.5 };
 
-                    // If it's a dimmer, let the DimmerModule create it
+                    // Route to appropriate module based on type
                     if (type === 'dimmer' && window.DimmerModule && typeof DimmerModule.create === 'function') {
                         DimmerModule.create({
                             entityId: entityId.trim(),
@@ -553,6 +567,28 @@ function updateButtonConfig(buttonId, newConfig) {
                             brightness: 50,
                             isOn: false,
                             type: 'dimmer'
+                        });
+                    } else if (type === 'cct' && window.CCTModule && typeof CCTModule.create === 'function') {
+                        CCTModule.create({
+                            entityId: entityId.trim(),
+                            name: name,
+                            position: position,
+                            iconClass: icon,
+                            brightness: 50,
+                            temperature: 50,
+                            isOn: false,
+                            type: 'cct'
+                        });
+                    } else if (type === 'rgb' && window.RGBModule && typeof RGBModule.create === 'function') {
+                        RGBModule.create({
+                            entityId: entityId.trim(),
+                            name: name,
+                            position: position,
+                            iconClass: icon,
+                            brightness: 50,
+                            hue: 180,
+                            isOn: false,
+                            type: 'rgb'
                         });
                     } else {
                         // For toggle and scene buttons
@@ -568,7 +604,7 @@ function updateButtonConfig(buttonId, newConfig) {
             });
         });
 
-        // Edit form submission - UPDATED FOR DIMMER SUPPORT
+        // Edit form submission - UPDATED WITH CCT AND RGB SUPPORT
         const editForm = document.getElementById('buttonEditForm');
         if (editForm) {
             editForm.addEventListener('submit', (e) => {
@@ -586,12 +622,27 @@ function updateButtonConfig(buttonId, newConfig) {
                         return;
                     }
 
-                    // Check if this is a dimmer button
-                    const isDimmer = lightButtons.find(b => b.id === editingButtonId)?.type === 'dimmer';
+                    // Check button type and route to appropriate module
+                    const btn = document.getElementById(editingButtonId);
+                    let isSpecialButton = false;
+                    let module = null;
 
-                    if (isDimmer && window.DimmerModule && DimmerModule.updateConfig) {
-                        // Update dimmer via DimmerModule
-                        DimmerModule.updateConfig(editingButtonId, newConfig);
+                    if (btn) {
+                        if (btn.classList.contains('dimmer') && window.DimmerModule && DimmerModule.updateConfig) {
+                            module = DimmerModule;
+                            isSpecialButton = true;
+                        } else if (btn.classList.contains('cct') && window.CCTModule && CCTModule.updateConfig) {
+                            module = CCTModule;
+                            isSpecialButton = true;
+                        } else if (btn.classList.contains('rgb') && window.RGBModule && RGBModule.updateConfig) {
+                            module = RGBModule;
+                            isSpecialButton = true;
+                        }
+                    }
+
+                    if (isSpecialButton && module) {
+                        // Update special button via its module
+                        module.updateConfig(editingButtonId, newConfig);
                     } else {
                         // Update regular button
                         updateButtonConfig(editingButtonId, newConfig);
@@ -603,15 +654,30 @@ function updateButtonConfig(buttonId, newConfig) {
             });
         }
 
-        // Delete button - UPDATED FOR DIMMER SUPPORT
+        // Delete button - UPDATED WITH CCT AND RGB SUPPORT
         document.getElementById('deleteBtn')?.addEventListener('click', () => {
             if (editingButtonId && confirm('Are you sure you want to delete this button?')) {
-                // Check if this is a dimmer button
-                const isDimmer = lightButtons.find(b => b.id === editingButtonId)?.type === 'dimmer';
+                // Check button type and route to appropriate module
+                const btn = document.getElementById(editingButtonId);
+                let isSpecialButton = false;
+                let module = null;
+
+                if (btn) {
+                    if (btn.classList.contains('dimmer') && window.DimmerModule && DimmerModule.deleteButton) {
+                        module = DimmerModule;
+                        isSpecialButton = true;
+                    } else if (btn.classList.contains('cct') && window.CCTModule && CCTModule.deleteButton) {
+                        module = CCTModule;
+                        isSpecialButton = true;
+                    } else if (btn.classList.contains('rgb') && window.RGBModule && RGBModule.deleteButton) {
+                        module = RGBModule;
+                        isSpecialButton = true;
+                    }
+                }
 
                 let deleted = false;
-                if (isDimmer && window.DimmerModule && DimmerModule.deleteButton) {
-                    deleted = DimmerModule.deleteButton(editingButtonId);
+                if (isSpecialButton && module) {
+                    deleted = module.deleteButton(editingButtonId);
                 } else {
                     deleted = deleteButton(editingButtonId);
                 }

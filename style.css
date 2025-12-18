@@ -15,6 +15,16 @@
     --dimmer-content-opacity: 1;
 }
 
+.toggle-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none !important;
+}
+
+.toggle-button:disabled .icon {
+    color: #999 !important;
+}
+
 /* Ensure buttons use CSS variables */
 .light-button {
     transform: translate(-50%, -50%) scale(var(--button-scale, 1));

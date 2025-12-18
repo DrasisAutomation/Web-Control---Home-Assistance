@@ -16,37 +16,35 @@
         <button class="header-control save-btn" id="saveBtn">💾 Save</button>
         <button id="clearAllBtn" class="header-control clear-all-btn"
             title="Clear all buttons, entities, and local storage">🗑️ Clear</button>
-<!-- Replace the edit-controls div in index.html with this: -->
-<div class="edit-controls" id="editControls">
-    <div class="range-control">
-        <label for="buttonSize">Size:</label>
-        <input type="range" id="buttonSize" min="0.5" max="2" step="0.1" value="1">
-        <span class="range-value" id="sizeValue">100%</span>
-    </div>
-    
-    <div class="range-control">
-        <label for="buttonOpacity">Opacity:</label>
-        <input type="range" id="buttonOpacity" min="0.5" max="1" step="0.1" value="0.8">
-        <span class="range-value" id="opacityValue">80%</span>
-    </div>
-    
-    <div class="range-control">
-        <label for="modalOpacity">Modal:</label>
-        <input type="range" id="modalOpacity" min="0.5" max="1" step="0.1" value="0.6">
-        <span class="range-value" id="modalValue">60%</span>
-    </div>
-    
-    <button class="header-control small-btn" id="imageBtn" title="Change Image">
-        <i class="fas fa-image"></i>
-    </button>
-    <button class="header-control small-btn" id="addBtn" title="Add Button">
-        <i class="fas fa-plus"></i>
-    </button>
-</div>
+        <div class="edit-controls" id="editControls">
+            <div class="range-control">
+                <label for="buttonSize">Size:</label>
+                <input type="range" id="buttonSize" min="0.5" max="2" step="0.1" value="1">
+                <span class="range-value" id="sizeValue">100%</span>
+            </div>
+            
+            <div class="range-control">
+                <label for="buttonOpacity">Opacity:</label>
+                <input type="range" id="buttonOpacity" min="0.5" max="1" step="0.1" value="0.8">
+                <span class="range-value" id="opacityValue">80%</span>
+            </div>
+            
+            <div class="range-control">
+                <label for="modalOpacity">Modal:</label>
+                <input type="range" id="modalOpacity" min="0.5" max="1" step="0.1" value="0.6">
+                <span class="range-value" id="modalValue">60%</span>
+            </div>
+            
+            <button class="header-control small-btn" id="imageBtn" title="Change Image">
+                <i class="fas fa-image"></i>
+            </button>
+            <button class="header-control small-btn" id="addBtn" title="Add Button">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
     </div>
 
     <div class="content" id="container">
-
         <div class="viewer-center">
             <div class="pan-layer" id="panLayer">
                 <img id="viewImage" src="image.png" alt="floor plan">
@@ -86,6 +84,16 @@
                         <i class="fas fa-sliders-h"></i>
                         <span>Dimmer</span>
                         <small>Brightness control</small>
+                    </div>
+                    <div class="button-type-item" data-type="cct" data-icon="fa-lightbulb">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>CCT Light</span>
+                        <small>Color temperature control</small>
+                    </div>
+                    <div class="button-type-item" data-type="rgb" data-icon="fa-lightbulb">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>RGB Light</span>
+                        <small>Color and brightness control</small>
                     </div>
                 </div>
             </div>
@@ -140,6 +148,8 @@
     <script src="toggle-button.js"></script>
     <script src="button.js"></script>
     <script src="dimmer.js"></script>
+    <script src="cct.js"></script>
+    <script src="rgb.js"></script>
     <script src="main.js"></script>
 </body>
 
