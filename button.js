@@ -527,7 +527,7 @@ function updateButtonConfig(buttonId, newConfig) {
 
                 // Prompt for entity ID
                 const buttonType = BUTTON_TYPES[type];
-                const entityId = prompt(`Enter Entity ID for ${buttonType.name}:`, 'light.');
+                const entityId = prompt(`Enter Entity ID for ${buttonType.name}:`, '');
 
                 if (entityId && entityId.trim()) {
                     const name = prompt(`Enter name (optional):`, buttonType.defaultName) || buttonType.defaultName;
