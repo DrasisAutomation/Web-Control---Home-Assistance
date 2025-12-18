@@ -1,11 +1,10 @@
-// main.js - Updated with localStorage persistence and clear functionality
+// main.js - Updated with working reset button functionality
 document.addEventListener("DOMContentLoaded", () => {
     // DOM Elements
     // 🔴 Block browser pinch zoom (mobile Safari & Chrome)
     document.addEventListener('gesturestart', e => e.preventDefault());
     document.addEventListener('gesturechange', e => e.preventDefault());
     document.addEventListener('gestureend', e => e.preventDefault());
-
 
     const container = document.getElementById("container");
     const pan = document.getElementById("panLayer");
@@ -75,55 +74,64 @@ document.addEventListener("DOMContentLoaded", () => {
         updateButtonPositions();
     }
 
-    // main.js - Updated resetViewHard function
-    // main.js - Enhanced resetViewHard function for mobile
+    // NEW: Enhanced reset view function that actually works
     function resetViewHard() {
-        // Reset all transform state
+        console.log("Resetting view...");
+        
+        // Clear any ongoing drag/pinch
+        isDragging = false;
+        isPinching = false;
+        container.classList.remove('grabbing');
+        
+        // Reset transform values
         scale = 1;
         posX = 0;
         posY = 0;
-
+        
         // Reset pinch state
-        isPinching = false;
         lastPinchDistance = null;
-
-        // Add reset transition class for smooth animation
-        pan.classList.add('reset-transition');
-
-        // Reset transform with important properties
-        pan.style.cssText = `
-        transform: translate(0px, 0px) scale(1) !important;
-        transform-origin: center center !important;
-        transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
-    `;
-
-        // Force browser to recognize the change
-        void pan.offsetWidth; // Trigger reflow
-
-        // Smoothly apply reset
+        
+        // METHOD 1: Direct transform reset
+        pan.style.transform = 'translate(0px, 0px) scale(1)';
+        pan.style.transformOrigin = 'center center';
+        
+        // METHOD 2: Remove and re-add transform style (for stubborn browsers)
+        setTimeout(() => {
+            // Clear any existing transform
+            pan.style.cssText = pan.style.cssText.replace(/transform[^;]*;?/g, '');
+            pan.style.transform = 'translate(0px, 0px) scale(1)';
+            pan.style.transformOrigin = 'center center';
+            
+            // Force browser to recognize the change
+            pan.offsetHeight; // Trigger reflow
+        }, 10);
+        
+        // METHOD 3: Use requestAnimationFrame for guaranteed execution
         requestAnimationFrame(() => {
             pan.style.transform = 'translate(0px, 0px) scale(1)';
-
-            // Update button positions after animation
-            setTimeout(() => {
-                pan.classList.remove('reset-transition');
+            pan.style.transformOrigin = 'center center';
+            
+            // Update button positions
+            updateButtonPositions();
+            
+            // Force image to reset its display
+            img.style.height = '80vh';
+            img.style.width = 'auto';
+            
+            // Final check and apply
+            requestAnimationFrame(() => {
+                pan.style.transform = 'translate(0px, 0px) scale(1)';
+                pan.style.transformOrigin = 'center center';
+                
+                // Update everything one more time
                 updateButtonPositions();
-
-                // Final check to ensure reset
-                setTimeout(() => {
-                    if (Math.abs(scale - 1) > 0.01 || Math.abs(posX) > 1 || Math.abs(posY) > 1) {
-                        // Force hard reset if not properly reset
-                        scale = 1;
-                        posX = 0;
-                        posY = 0;
-                        pan.style.transform = 'translate(0px, 0px) scale(1)';
-                        updateButtonPositions();
-                    }
-                }, 100);
-            }, 300);
+                
+                // Log success
+                console.log("View reset complete");
+            });
         });
-
-        // Immediate position update
+        
+        // Immediate update
         updateButtonPositions();
     }
 
@@ -144,7 +152,6 @@ document.addEventListener("DOMContentLoaded", () => {
         pan.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
         updateButtonPositions();
     }
-
 
     // Update button positions
     function updateButtonPositions() {
@@ -524,7 +531,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return false;
     }
 
-    // Update footer text
+    // Update footer text - SIMPLIFIED VERSION
     function updateFooter(text) {
         const footer = document.querySelector('.footer');
         footer.innerHTML = `${text} <button class="footer-control load-btn" id="loadBtn">📂 Load...</button>`;
@@ -605,7 +612,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-
         // Image panning
         container.addEventListener('mousedown', (e) => {
             if (e.target.closest('.light-button')) return;
@@ -634,20 +640,28 @@ document.addEventListener("DOMContentLoaded", () => {
         // Zoom
         container.addEventListener('wheel', handleZoom, { passive: false });
 
-        // main.js - Updated reset button event listener
+        // NEW: Enhanced reset button with visual feedback
         resetBtn.addEventListener('click', () => {
-            resetViewHard();
-
+            console.log("Reset button clicked");
+            
             // Add visual feedback
             resetBtn.innerHTML = '✓';
             resetBtn.style.background = '#4CAF50';
-
+            resetBtn.style.transform = 'scale(1.1)';
+            
+            // Call the enhanced reset function
+            resetViewHard();
+            
+            // Update footer
+            updateFooter('View reset');
+            
+            // Restore button appearance after delay
             setTimeout(() => {
                 resetBtn.innerHTML = '↺';
                 resetBtn.style.background = 'rgba(0,0,0,0.7)';
+                resetBtn.style.transform = 'scale(1)';
             }, 1000);
         });
-
 
         // Edit mode toggle
         editBtn.addEventListener('click', () => {
@@ -713,7 +727,52 @@ document.addEventListener("DOMContentLoaded", () => {
         addBtn.addEventListener('click', () => {
             document.getElementById('buttonPickerModal').style.display = 'flex';
         });
+
+        // NEW: Add keyboard shortcut for reset (ESC key)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !isEditMode) {
+                resetViewHard();
+                updateFooter('View reset (ESC)');
+                
+                // Visual feedback on reset button
+                resetBtn.innerHTML = '✓';
+                resetBtn.style.background = '#4CAF50';
+                setTimeout(() => {
+                    resetBtn.innerHTML = '↺';
+                    resetBtn.style.background = 'rgba(0,0,0,0.7)';
+                }, 500);
+            }
+        });
+
+        // NEW: Add double-tap to reset on mobile
+        let lastTapTime = 0;
+        container.addEventListener('touchend', (e) => {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTapTime;
+            
+            // Double-tap detection (300ms threshold)
+            if (tapLength < 300 && tapLength > 0 && e.touches.length === 0) {
+                e.preventDefault();
+                
+                // Double-tap to reset
+                resetViewHard();
+                updateFooter('View reset (double-tap)');
+                
+                // Visual feedback
+                resetBtn.innerHTML = '✓';
+                resetBtn.style.background = '#4CAF50';
+                setTimeout(() => {
+                    resetBtn.innerHTML = '↺';
+                    resetBtn.style.background = 'rgba(0,0,0,0.7)';
+                }, 500);
+                
+                return false;
+            }
+            
+            lastTapTime = currentTime;
+        }, { passive: false });
     }
+
     // --- FIX EDIT MODAL UPDATE ---
     document.getElementById("buttonEditForm").addEventListener("submit", function (e) {
         e.preventDefault();
@@ -751,7 +810,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // Button edit modal close
     document.getElementById('closeEditBtn')?.addEventListener('click', () => {
         document.getElementById('buttonEditModal').style.display = 'none';
-        editingButtonId = null;
         if (window.buttons) {
             window.buttons.setEditingButtonId(null);
         }
@@ -762,7 +820,6 @@ document.addEventListener("DOMContentLoaded", () => {
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) {
                 overlay.style.display = 'none';
-                editingButtonId = null;
                 if (window.buttons) {
                     window.buttons.setEditingButtonId(null);
                 }
@@ -1066,54 +1123,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Window resize handler
-// main.js - Updated window resize handler
-window.addEventListener("resize", () => {
-    // Store current scale before reset
-    const oldScale = scale;
-    
-    // Reinitialize image
-    initImage();
-    
-    // If we were zoomed in, maintain some zoom level
-    if (oldScale > 1.5) {
-        scale = Math.min(oldScale, maxScale);
-        applyTransform();
-    }
-    
-    updateButtonPositions();
-});
+    window.addEventListener("resize", () => {
+        initImage();
+    });
 
-// main.js - Enhanced mobile zoom prevention
-function setupMobileZoomPrevention() {
-    // Prevent double-tap zoom
-    let lastTap = 0;
-    container.addEventListener('touchend', (e) => {
-        const currentTime = new Date().getTime();
-        const tapLength = currentTime - lastTap;
-        
-        if (tapLength < 300 && tapLength > 0) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Optional: double-tap to zoom in/out
-            // if (scale === 1) {
-            //     scale = 2;
-            // } else {
-            //     resetViewHard();
-            // }
-            // applyTransform();
-        }
-        
-        lastTap = currentTime;
-    }, { passive: false });
-    
-    // Additional zoom prevention
-    document.addEventListener('touchmove', (e) => {
-        if (e.scale !== 1) {
-            e.preventDefault();
-        }
-    }, { passive: false });
-}
     // Initialize everything
     function init() {
         // Initialize buttons module first
@@ -1130,7 +1143,6 @@ function setupMobileZoomPrevention() {
         }
 
         initImage();
-        setupMobileZoomPrevention(); 
         setupEventListeners();
 
         // Load priority:
@@ -1175,3 +1187,24 @@ function getDistance(t1, t2) {
     const dy = t2.clientY - t1.clientY;
     return Math.hypot(dx, dy);
 }
+
+// Global function to force reset view (for debugging)
+window.forceReset = function() {
+    const pan = document.getElementById('panLayer');
+    const img = document.getElementById('viewImage');
+    
+    if (pan && img) {
+        // Nuclear reset
+        pan.style.cssText = '';
+        pan.style.transform = 'translate(0px, 0px) scale(1)';
+        pan.style.transformOrigin = 'center center';
+        
+        img.style.height = '80vh';
+        img.style.width = 'auto';
+        
+        // Force re-render
+        pan.offsetHeight;
+        
+        console.log("Force reset complete");
+    }
+};
