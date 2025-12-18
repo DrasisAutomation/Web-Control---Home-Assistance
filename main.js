@@ -75,8 +75,10 @@ document.addEventListener("DOMContentLoaded", () => {
         updateButtonPositions();
     }
 
+    // main.js - Updated resetViewHard function
+    // main.js - Enhanced resetViewHard function for mobile
     function resetViewHard() {
-        // Reset transform values
+        // Reset all transform state
         scale = 1;
         posX = 0;
         posY = 0;
@@ -85,14 +87,45 @@ document.addEventListener("DOMContentLoaded", () => {
         isPinching = false;
         lastPinchDistance = null;
 
-        // Force transform reset
-        pan.style.transform = 'translate(0px, 0px) scale(1)';
-        pan.style.transformOrigin = 'center center';
+        // Add reset transition class for smooth animation
+        pan.classList.add('reset-transition');
 
-        // Re-sync buttons & dimmers
+        // Reset transform with important properties
+        pan.style.cssText = `
+        transform: translate(0px, 0px) scale(1) !important;
+        transform-origin: center center !important;
+        transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+    `;
+
+        // Force browser to recognize the change
+        void pan.offsetWidth; // Trigger reflow
+
+        // Smoothly apply reset
+        requestAnimationFrame(() => {
+            pan.style.transform = 'translate(0px, 0px) scale(1)';
+
+            // Update button positions after animation
+            setTimeout(() => {
+                pan.classList.remove('reset-transition');
+                updateButtonPositions();
+
+                // Final check to ensure reset
+                setTimeout(() => {
+                    if (Math.abs(scale - 1) > 0.01 || Math.abs(posX) > 1 || Math.abs(posY) > 1) {
+                        // Force hard reset if not properly reset
+                        scale = 1;
+                        posX = 0;
+                        posY = 0;
+                        pan.style.transform = 'translate(0px, 0px) scale(1)';
+                        updateButtonPositions();
+                    }
+                }, 100);
+            }, 300);
+        });
+
+        // Immediate position update
         updateButtonPositions();
     }
-
 
     // Get image metadata for buttons.js
     function getImageMetadata() {
@@ -601,8 +634,18 @@ document.addEventListener("DOMContentLoaded", () => {
         // Zoom
         container.addEventListener('wheel', handleZoom, { passive: false });
 
+        // main.js - Updated reset button event listener
         resetBtn.addEventListener('click', () => {
             resetViewHard();
+
+            // Add visual feedback
+            resetBtn.innerHTML = '✓';
+            resetBtn.style.background = '#4CAF50';
+
+            setTimeout(() => {
+                resetBtn.innerHTML = '↺';
+                resetBtn.style.background = 'rgba(0,0,0,0.7)';
+            }, 1000);
         });
 
 
@@ -1023,10 +1066,54 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Window resize handler
-    window.addEventListener("resize", () => {
-        initImage();
-    });
+// main.js - Updated window resize handler
+window.addEventListener("resize", () => {
+    // Store current scale before reset
+    const oldScale = scale;
+    
+    // Reinitialize image
+    initImage();
+    
+    // If we were zoomed in, maintain some zoom level
+    if (oldScale > 1.5) {
+        scale = Math.min(oldScale, maxScale);
+        applyTransform();
+    }
+    
+    updateButtonPositions();
+});
 
+// main.js - Enhanced mobile zoom prevention
+function setupMobileZoomPrevention() {
+    // Prevent double-tap zoom
+    let lastTap = 0;
+    container.addEventListener('touchend', (e) => {
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        
+        if (tapLength < 300 && tapLength > 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Optional: double-tap to zoom in/out
+            // if (scale === 1) {
+            //     scale = 2;
+            // } else {
+            //     resetViewHard();
+            // }
+            // applyTransform();
+        }
+        
+        lastTap = currentTime;
+    }, { passive: false });
+    
+    // Additional zoom prevention
+    document.addEventListener('touchmove', (e) => {
+        if (e.scale !== 1) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+}
     // Initialize everything
     function init() {
         // Initialize buttons module first
@@ -1043,6 +1130,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         initImage();
+        setupMobileZoomPrevention(); 
         setupEventListeners();
 
         // Load priority:
