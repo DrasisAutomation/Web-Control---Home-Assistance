@@ -1,26 +1,26 @@
 // Global selection handler - must be available BEFORE modules load
-window.selectButtonForEdit = function(buttonId, type) {
+window.selectButtonForEdit = function (buttonId, type) {
     console.log('Selecting button:', buttonId, 'type:', type);
-    
+
     // Clear previous selection
     document.querySelectorAll('.light-button.selected')
         .forEach(b => {
             b.classList.remove('selected');
             console.log('Removed selection from:', b.id);
         });
-    
+
     const btn = document.getElementById(buttonId);
     if (!btn) {
         console.error('Button not found:', buttonId);
         return;
     }
-    
+
     btn.classList.add('selected');
     console.log('Added selection to:', buttonId);
-    
+
     window.currentEditingButton = buttonId;
     window.currentEditingType = type;
-    
+
     // Store in both window.buttons and global for backup
     if (window.buttons) {
         window.buttons.setEditingButtonId(buttonId);
@@ -1273,63 +1273,74 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    document.getElementById("buttonEditForm").addEventListener("submit", function (e) {
-        e.preventDefault();
+// In main.js - replace the form submission handler
+document.getElementById("buttonEditForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    console.log('Form submitted');
 
-        const entityId = document.getElementById("editEntityId").value.trim();
-        const name = document.getElementById("editName").value.trim();
-        const icon = document.getElementById("editIcon").value;
+    const entityId = document.getElementById("editEntityId").value.trim();
+    const name = document.getElementById("editName").value.trim();
+    const icon = document.getElementById("editIcon").value;
 
-        const btnId = buttons.getEditingButtonId();
+    console.log('Form values:', { entityId, name, icon });
 
-        if (!btnId) {
-            alert("No button selected.");
-            return;
-        }
+    // Get the button ID that's being edited
+    const btnId = window.currentEditingButton;
+    const btnType = window.currentEditingType;
 
-        if (!entityId) {
-            alert("Entity ID is required.");
-            return;
-        }
+    console.log('Editing button:', btnId, 'type:', btnType);
 
-        // Determine which module to update based on button type
-        const buttonType = getButtonType(btnId);
+    if (!btnId) {
+        alert("No button selected.");
+        console.error('No button selected');
+        return;
+    }
 
-        if (buttonType === 'dimmer' && window.DimmerModule) {
-            DimmerModule.updateConfig(btnId, {
-                entityId: entityId,
-                name: name || 'Dimmer',
-                iconClass: icon
-            });
-        } else if (buttonType === 'cct' && window.CCTModule) {
-            CCTModule.updateConfig(btnId, {
-                entityId: entityId,
-                name: name || 'CCT Light',
-                iconClass: icon
-            });
-        } else if (buttonType === 'rgb' && window.RGBModule) {
-            RGBModule.updateConfig(btnId, {
-                entityId: entityId,
-                name: name || 'RGB Light',
-                iconClass: icon
-            });
-        } else {
-            buttons.updateButtonConfig(btnId, {
-                entityId: entityId,
-                name: name || 'Button',
-                iconClass: icon
-            });
-        }
+    if (!entityId) {
+        alert("Entity ID is required.");
+        console.error('Entity ID is required');
+        return;
+    }
 
-        document.getElementById("buttonEditModal").style.display = "none";
+    // Determine which module to update based on button type
+    if (btnType === 'dimmer' && window.DimmerModule) {
+        console.log('Updating dimmer button:', btnId);
+        const success = DimmerModule.updateConfig(btnId, {
+            entityId: entityId,
+            name: name || 'Dimmer',
+            iconClass: icon
+        });
+        console.log('Dimmer update result:', success);
+    } else if (btnType === 'cct' && window.CCTModule) {
+        console.log('Updating CCT button:', btnId);
+        const success = CCTModule.updateConfig(btnId, {
+            entityId: entityId,
+            name: name || 'CCT Light',
+            iconClass: icon
+        });
+        console.log('CCT update result:', success);
+    } else if (btnType === 'rgb' && window.RGBModule) {
+        console.log('Updating RGB button:', btnId);
+        const success = RGBModule.updateConfig(btnId, {
+            entityId: entityId,
+            name: name || 'RGB Light',
+            iconClass: icon
+        });
+        console.log('RGB update result:', success);
+    } else {
+        console.log('Updating regular button:', btnId);
+        const success = buttons.updateButtonConfig(btnId, {
+            entityId: entityId,
+            name: name || 'Button',
+            iconClass: icon
+        });
+        console.log('Regular button update result:', success);
+    }
 
-        buttons.setEditingButtonId(null);
-    });
-
-document.getElementById('closeEditBtn')?.addEventListener('click', () => {
-    document.getElementById('buttonEditModal').style.display = 'none';
+    // Close modal
+    document.getElementById("buttonEditModal").style.display = "none";
     
-    // Clear selection when modal closes
+    // Clear selection
     if (window.currentEditingButton) {
         const btn = document.getElementById(window.currentEditingButton);
         if (btn) btn.classList.remove('selected');
@@ -1339,22 +1350,35 @@ document.getElementById('closeEditBtn')?.addEventListener('click', () => {
     window.currentEditingType = null;
 });
 
-document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
-            overlay.style.display = 'none';
-            
-            // Clear selection when modal closes
-            if (window.currentEditingButton) {
-                const btn = document.getElementById(window.currentEditingButton);
-                if (btn) btn.classList.remove('selected');
-            }
-            
-            window.currentEditingButton = null;
-            window.currentEditingType = null;
+    document.getElementById('closeEditBtn')?.addEventListener('click', () => {
+        document.getElementById('buttonEditModal').style.display = 'none';
+
+        // Clear selection when modal closes
+        if (window.currentEditingButton) {
+            const btn = document.getElementById(window.currentEditingButton);
+            if (btn) btn.classList.remove('selected');
         }
+
+        window.currentEditingButton = null;
+        window.currentEditingType = null;
     });
-});
+
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.style.display = 'none';
+
+                // Clear selection when modal closes
+                if (window.currentEditingButton) {
+                    const btn = document.getElementById(window.currentEditingButton);
+                    if (btn) btn.classList.remove('selected');
+                }
+
+                window.currentEditingButton = null;
+                window.currentEditingType = null;
+            }
+        });
+    });
 
     function connectWebSocket() {
         ws = new WebSocket(WS_URL);
@@ -1882,13 +1906,13 @@ document.addEventListener('keydown', (e) => {
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.style.display = 'none';
         });
-        
+
         // Clear selection when modal closes
         if (window.currentEditingButton) {
             const btn = document.getElementById(window.currentEditingButton);
             if (btn) btn.classList.remove('selected');
         }
-        
+
         window.currentEditingButton = null;
         window.currentEditingType = null;
     }

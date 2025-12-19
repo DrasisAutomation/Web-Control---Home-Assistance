@@ -379,7 +379,7 @@ window.CCTModule = (function () {
             temperature: cct.temperature || 50,
             isOn: cct.isOn || false
         }));
-        
+
         localStorage.setItem('cctButtons', JSON.stringify(cleanCCTs));
     }
 
@@ -464,7 +464,7 @@ window.CCTModule = (function () {
         let startY = 0;
         let startLeft = 0;
         let startTop = 0;
-        
+
         // Mouse down handler
         button.addEventListener('mousedown', (e) => {
             if (!isEditMode) {
@@ -497,11 +497,11 @@ window.CCTModule = (function () {
                 // Check if we haven't moved much
                 const movedX = Math.abs(e.clientX - startX);
                 const movedY = Math.abs(e.clientY - startY);
-                
+
                 if (movedX < dragThreshold && movedY < dragThreshold && !isDragging) {
                     showEditModal(config);
                 }
-                
+
                 longPressTimer = null;
             }, 600);
 
@@ -509,13 +509,13 @@ window.CCTModule = (function () {
             const mouseMoveHandler = (moveEvent) => {
                 const moveX = Math.abs(moveEvent.clientX - startX);
                 const moveY = Math.abs(moveEvent.clientY - startY);
-                
+
                 // If movement exceeds threshold, start dragging
                 if ((moveX > dragThreshold || moveY > dragThreshold) && longPressTimer) {
                     clearTimeout(longPressTimer);
                     longPressTimer = null;
                     startDrag(moveEvent, button, config);
-                    
+
                     // Remove this listener
                     document.removeEventListener('mousemove', mouseMoveHandler);
                 }
@@ -575,7 +575,7 @@ window.CCTModule = (function () {
             const touch = e.touches[0];
             const moveX = Math.abs(touch.clientX - startX);
             const moveY = Math.abs(touch.clientY - startY);
-            
+
             // If movement exceeds threshold, start dragging
             if (moveX > dragThreshold || moveY > dragThreshold) {
                 if (longPressTimer) {
@@ -584,7 +584,7 @@ window.CCTModule = (function () {
                 }
                 startDrag(e, button, config);
             }
-            
+
             e.preventDefault();
         });
 
@@ -596,7 +596,7 @@ window.CCTModule = (function () {
                     showEditModal(config);
                     longPressTimer = null;
                 }
-                
+
                 if (isDragging) {
                     stopDrag();
                 }
@@ -618,7 +618,7 @@ window.CCTModule = (function () {
 
         const startDragX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
         const startDragY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-        
+
         const originalLeft = parseFloat(button.style.left);
         const originalTop = parseFloat(button.style.top);
 
@@ -682,43 +682,61 @@ window.CCTModule = (function () {
         document.addEventListener('touchend', dragEndHandler);
     }
 
-// Stop dragging
-function stopDrag() {
-    isDragging = false;
-    
-    // Clear selection when drag ends
-    if (currentCCT) {
-        const btn = document.getElementById(currentCCT.id);
-        if (btn) btn.classList.remove('selected');
-    }
-    
-    // Reset all CCT buttons cursor
-    cctButtons.forEach(config => {
-        const btn = document.getElementById(config.id);
-        if (btn) {
-            btn.classList.remove('dragging');
-            btn.style.cursor = 'grab';
-        }
-    });
-}
+    // Stop dragging
+    function stopDrag() {
+        isDragging = false;
 
-    // Show edit modal for CCT
+        // Clear selection when drag ends
+        if (currentCCT) {
+            const btn = document.getElementById(currentCCT.id);
+            if (btn) btn.classList.remove('selected');
+        }
+
+        // Reset all CCT buttons cursor
+        cctButtons.forEach(config => {
+            const btn = document.getElementById(config.id);
+            if (btn) {
+                btn.classList.remove('dragging');
+                btn.style.cursor = 'grab';
+            }
+        });
+    }
+
 // Show edit modal for CCT
 function showEditModal(config) {
+    console.log('CCT: Opening edit modal for:', config.id, 'type: cct');
+    
     // Mark button as selected
-    selectButtonForEdit(config.id, 'cct');
+    if (window.selectButtonForEdit) {
+        window.selectButtonForEdit(config.id, 'cct');
+    }
     
     // Fill the edit form
-    document.getElementById('editEntityId').value = config.entityId || '';
-    document.getElementById('editName').value = config.name || '';
-    document.getElementById('editIcon').value = config.iconClass || 'fa-lightbulb';
+    const editEntityId = document.getElementById('editEntityId');
+    const editName = document.getElementById('editName');
+    const editIcon = document.getElementById('editIcon');
+    
+    if (editEntityId) editEntityId.value = config.entityId || '';
+    if (editName) editName.value = config.name || 'CCT Light';
+    if (editIcon) editIcon.value = config.iconClass || 'fa-lightbulb';
     
     // Store which button we're editing
     window.currentEditingButton = config.id;
     window.currentEditingType = 'cct';
     
+    // Also set in buttons module
+    if (window.buttons && window.buttons.setEditingButtonId) {
+        window.buttons.setEditingButtonId(config.id);
+    }
+    
     // Show modal
-    document.getElementById('buttonEditModal').style.display = 'flex';
+    const modal = document.getElementById('buttonEditModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        console.log('CCT: Modal displayed');
+    } else {
+        console.error('CCT: Edit modal not found');
+    }
 }
 
     // Update CCT button UI
@@ -931,34 +949,67 @@ function showEditModal(config) {
         return cctButtons;
     }
 
-    // Update button config
-    function updateConfig(buttonId, newConfig) {
-        const index = cctButtons.findIndex(b => b.id === buttonId);
-        if (index !== -1) {
-            cctButtons[index] = { ...cctButtons[index], ...newConfig };
+function updateConfig(buttonId, newConfig) {
+    const index = cctButtons.findIndex(b => b.id === buttonId);
+    if (index === -1) return false;
 
-            // Update UI
-            const btn = document.getElementById(buttonId);
-            if (btn) {
-                const icon = btn.querySelector('.icon');
-                if (icon && newConfig.iconClass) {
-                    icon.className = 'icon fas ' + newConfig.iconClass;
-                }
+    const btnData = cctButtons[index];
+    const oldEntityId = btnData.entityId;
 
-                // Update entityId in dataset
-                btn.dataset.entityId = newConfig.entityId || '';
+    // ✅ UPDATE STORED DATA (CRITICAL)
+    Object.assign(btnData, newConfig);
 
-                // Update brightness if changed
-                if (newConfig.brightness !== undefined) {
-                    updateCCTUI(btn, newConfig.brightness, newConfig.brightness > 0);
-                }
-            }
+    const btn = document.getElementById(buttonId);
+    if (!btn) return false;
 
-            saveToLocalStorage();
-            return true;
-        }
-        return false;
+    // ✅ ICON
+    if (newConfig.iconClass) {
+        const icon = btn.querySelector('.icon');
+        icon.className = `icon fas ${newConfig.iconClass}`;
     }
+
+    // ✅ NAME
+    if (newConfig.name) {
+        btn.dataset.name = newConfig.name;
+        btn.title = newConfig.name;
+    }
+
+    // ✅ ENTITY SYNC (same as toggle)
+    if (newConfig.entityId && newConfig.entityId !== oldEntityId) {
+
+        if (oldEntityId && window.EntityButtons?.[oldEntityId]) {
+            window.EntityButtons[oldEntityId] =
+                window.EntityButtons[oldEntityId].filter(b => b.id !== buttonId);
+        }
+
+        if (!window.EntityButtons) window.EntityButtons = {};
+        if (!window.EntityButtons[newConfig.entityId]) {
+            window.EntityButtons[newConfig.entityId] = [];
+        }
+
+        const entityButton = {
+            id: buttonId,
+            entityId: newConfig.entityId,
+            isOn: false,
+            updateUI() {
+                const el = document.getElementById(this.id);
+                if (!el) return;
+                el.classList.toggle('on', this.isOn);
+            },
+            handleStateUpdate(state) {
+                this.isOn = state === 'on';
+                this.updateUI();
+            }
+        };
+
+        window.EntityButtons[newConfig.entityId].push(entityButton);
+        btn.dataset.entityId = newConfig.entityId;
+    }
+
+    saveToLocalStorage();
+    return true;
+}
+
 
     // Delete button
     function deleteButton(buttonId) {

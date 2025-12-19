@@ -474,24 +474,42 @@ window.DimmerModule = (function () {
             }
         });
     }
-    // Show edit modal for dimmer
-    // Show edit modal for dimmer
-    function showEditModal(config) {
-        // Mark button as selected
-        selectButtonForEdit(config.id, 'dimmer');
-
-        // Fill the edit form
-        document.getElementById('editEntityId').value = config.entityId || '';
-        document.getElementById('editName').value = config.name || '';
-        document.getElementById('editIcon').value = config.iconClass || 'fa-sliders-h';
-
-        // Store which button we're editing
-        window.currentEditingButton = config.id;
-        window.currentEditingType = 'dimmer';
-
-        // Show modal
-        document.getElementById('buttonEditModal').style.display = 'flex';
+// Show edit modal for dimmer
+function showEditModal(config) {
+    console.log('Dimmer: Opening edit modal for:', config.id, 'type: dimmer');
+    
+    // Mark button as selected
+    if (window.selectButtonForEdit) {
+        window.selectButtonForEdit(config.id, 'dimmer');
     }
+    
+    // Fill the edit form
+    const editEntityId = document.getElementById('editEntityId');
+    const editName = document.getElementById('editName');
+    const editIcon = document.getElementById('editIcon');
+    
+    if (editEntityId) editEntityId.value = config.entityId || '';
+    if (editName) editName.value = config.name || 'Dimmer';
+    if (editIcon) editIcon.value = config.iconClass || 'fa-sliders-h';
+    
+    // Store which button we're editing
+    window.currentEditingButton = config.id;
+    window.currentEditingType = 'dimmer';
+    
+    // Also set in buttons module
+    if (window.buttons && window.buttons.setEditingButtonId) {
+        window.buttons.setEditingButtonId(config.id);
+    }
+    
+    // Show modal
+    const modal = document.getElementById('buttonEditModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        console.log('Dimmer: Modal displayed');
+    } else {
+        console.error('Dimmer: Edit modal not found');
+    }
+}
 
     // Update dimmer button UI
     function updateDimmerUI(button, brightness, isOn) {
@@ -658,34 +676,70 @@ window.DimmerModule = (function () {
         return dimmerButtons;
     }
 
-    // Update button config
-    function updateConfig(buttonId, newConfig) {
-        const index = dimmerButtons.findIndex(b => b.id === buttonId);
-        if (index !== -1) {
-            dimmerButtons[index] = { ...dimmerButtons[index], ...newConfig };
+// Update button config
+function updateConfig(buttonId, newConfig) {
+    const index = dimmerButtons.findIndex(b => b.id === buttonId);
+    if (index === -1) return false;
 
-            // Update UI
-            const btn = document.getElementById(buttonId);
-            if (btn) {
-                const icon = btn.querySelector('.icon');
-                if (icon && newConfig.iconClass) {
-                    icon.className = 'icon fas ' + newConfig.iconClass;
-                }
+    const btnData = dimmerButtons[index];
+    const oldEntityId = btnData.entityId;
 
-                // Update entityId in dataset
-                btn.dataset.entityId = newConfig.entityId || '';
+    // ✅ UPDATE STORED DATA (CRITICAL)
+    Object.assign(btnData, newConfig);
 
-                // Update brightness if changed
-                if (newConfig.brightness !== undefined) {
-                    updateDimmerUI(btn, newConfig.brightness, newConfig.brightness > 0);
-                }
-            }
+    const btn = document.getElementById(buttonId);
+    if (!btn) return false;
 
-            saveToLocalStorage();
-            return true;
-        }
-        return false;
+    /* ---------- ICON ---------- */
+    if (newConfig.iconClass) {
+        const icon = btn.querySelector('.icon');
+        icon.className = `icon fas ${newConfig.iconClass}`;
     }
+
+    /* ---------- NAME ---------- */
+    if (newConfig.name) {
+        btn.dataset.name = newConfig.name;
+        btn.title = newConfig.name;
+    }
+
+    /* ---------- ENTITY SYNC ---------- */
+    if (newConfig.entityId && newConfig.entityId !== oldEntityId) {
+
+        // remove from old entity
+        if (oldEntityId && window.EntityButtons?.[oldEntityId]) {
+            window.EntityButtons[oldEntityId] =
+                window.EntityButtons[oldEntityId].filter(b => b.id !== buttonId);
+        }
+
+        // add to new entity
+        if (!window.EntityButtons) window.EntityButtons = {};
+        if (!window.EntityButtons[newConfig.entityId]) {
+            window.EntityButtons[newConfig.entityId] = [];
+        }
+
+        const entityButton = {
+            id: buttonId,
+            entityId: newConfig.entityId,
+            isOn: false,
+            updateUI() {
+                const el = document.getElementById(this.id);
+                if (!el) return;
+                el.classList.toggle('on', this.isOn);
+            },
+            handleStateUpdate(state) {
+                this.isOn = state === 'on';
+                this.updateUI();
+            }
+        };
+
+        window.EntityButtons[newConfig.entityId].push(entityButton);
+        btn.dataset.entityId = newConfig.entityId;
+    }
+
+    saveToLocalStorage();
+    return true;
+}
+
 
     // Delete button
     function deleteButton(buttonId) {

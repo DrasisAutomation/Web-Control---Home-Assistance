@@ -735,3 +735,33 @@ body {
     outline-offset: 2px !important;
     z-index: 1000 !important;
 }
+
+
+.footer span{
+    display: none !important;
+}
+
+/* SVG Icon Styles for Light Buttons */
+.light-button .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.light-button .icon svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
+
+/* Default icon color for off state */
+.light-button:not(.on) .icon svg {
+    fill: #666;
+}
+
+/* Icon color for on state */
+.light-button.on .icon svg {
+    fill: #ffcc00;
+}
