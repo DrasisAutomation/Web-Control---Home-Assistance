@@ -1,4 +1,4 @@
-// buttons.js - Button management module with CCT and RGB support
+// buttons.js - Button management module with CCT and RGB support (FIXED ICONS)
 window.buttons = (function () {
     // Internal state
     let lightButtons = [];
@@ -12,37 +12,37 @@ window.buttons = (function () {
     let panStart = { x: 0, y: 0 };
     let longPressTimer = null;
     let editingButtonId = null;
-    let dragThreshold = 10; // Minimum movement to consider it a drag
+    let dragThreshold = 10;
 
     // Button types configuration
     const BUTTON_TYPES = {
         toggle: {
             name: 'Toggle Light',
-            icon: 'fa-lightbulb',
+            icon: 'light-bulb-1.svg',
             defaultName: 'Light',
             type: 'toggle'
         },
         scene: {
             name: 'Scene',
-            icon: 'fa-palette',
+            icon: 'scene.svg',
             defaultName: 'Scene',
             type: 'scene'
         },
         dimmer: {
             name: 'Dimmer',
-            icon: 'fa-sliders-h',
+            icon: 'dimmer.svg',
             defaultName: 'Dimmer',
             type: 'dimmer'
         },
         cct: {
             name: 'CCT Light',
-            icon: 'fa-lightbulb',
+            icon: 'light-bulb-1.svg',
             defaultName: 'CCT Light',
             type: 'cct'
         },
         rgb: {
             name: 'RGB Light',
-            icon: 'fa-lightbulb',
+            icon: 'light-bulb-1.svg',
             defaultName: 'RGB Light',
             type: 'rgb'
         }
@@ -68,7 +68,6 @@ window.buttons = (function () {
             deleteButton,
             updateButtonPositions
         };
-
     }
 
     // Load from localStorage
@@ -84,9 +83,8 @@ window.buttons = (function () {
                 lightButtons = [];
             }
         } else {
-            lightButtons = [];   // NO DEFAULT BUTTONS
+            lightButtons = [];
         }
-
     }
 
     // Save to localStorage
@@ -123,7 +121,7 @@ window.buttons = (function () {
 
         // Ensure required properties
         config.type = config.type || 'toggle';
-        config.iconClass = config.iconClass || BUTTON_TYPES[config.type]?.icon || 'fa-lightbulb';
+        config.iconClass = config.iconClass || BUTTON_TYPES[config.type]?.icon || 'light-bulb-1.svg';
         config.name = config.name || BUTTON_TYPES[config.type]?.defaultName || 'Button';
 
         // Add to array
@@ -184,7 +182,7 @@ window.buttons = (function () {
         return lightButtons;
     }
 
-    // Update button configuration
+    // Update button config
     function updateButtonConfig(buttonId, newConfig) {
         const index = lightButtons.findIndex(b => b.id === buttonId);
         if (index === -1) return false;
@@ -192,27 +190,40 @@ window.buttons = (function () {
         const buttonData = lightButtons[index];
         const oldEntityId = buttonData.entityId;
 
-        // ✅ Update stored data
+        // Update stored data
         Object.assign(buttonData, newConfig);
 
         const btn = document.getElementById(buttonId);
         if (!btn) return false;
 
-        /* ---------- ICON UPDATE ---------- */
-        if (newConfig.iconClass) {
-            const icon = btn.querySelector('.icon');
-            icon.className = `icon fas ${newConfig.iconClass}`;
-        }
+// 🔴 FIXED ICON UPDATE
+if (newConfig.iconClass) {
+    // Update stored icon
+    buttonData.iconClass = newConfig.iconClass;
+    
+    // Clear and set new icon with proper delay
+    if (window.SVGIcons) {
+        // Clear any existing icons
+        window.SVGIcons.clearButtonIcons(btn);
+        
+        // Update the data attribute
+        btn.dataset.icon = newConfig.iconClass;
+        
+        // Set new icon with a small delay to ensure DOM is ready
+        setTimeout(() => {
+            window.SVGIcons.setIconImmediately(btn, newConfig.iconClass);
+        }, 10);
+    }
+}
 
-        /* ---------- NAME UPDATE ---------- */
+        // NAME UPDATE
         if (newConfig.name) {
             btn.dataset.name = newConfig.name;
-            btn.title = newConfig.name; // tooltip
+            btn.title = newConfig.name;
         }
 
-        /* ---------- ENTITY UPDATE (CRITICAL FIX) ---------- */
+        // ENTITY UPDATE
         if (newConfig.entityId && newConfig.entityId !== oldEntityId) {
-
             // Remove from old entity group
             if (oldEntityId && window.EntityButtons?.[oldEntityId]) {
                 window.EntityButtons[oldEntityId] =
@@ -233,6 +244,10 @@ window.buttons = (function () {
                     const el = document.getElementById(this.id);
                     if (!el) return;
                     el.classList.toggle('on', this.isOn);
+                    // Update icon color
+                    if (window.SVGIcons && window.SVGIcons.updateIconColor) {
+                        window.SVGIcons.updateIconColor(el);
+                    }
                 },
                 handleStateUpdate(state) {
                     this.isOn = state === 'on';
@@ -241,8 +256,6 @@ window.buttons = (function () {
             };
 
             window.EntityButtons[newConfig.entityId].push(entityButton);
-
-            // Update DOM dataset
             btn.dataset.entityId = newConfig.entityId;
         }
 
@@ -303,30 +316,42 @@ window.buttons = (function () {
         lightButtons.forEach(createLightButton);
     }
 
-    // Create a light button DOM element
-    function createLightButton(config) {
-        // Remove existing button if present
-        const existingBtn = document.getElementById(config.id);
-        if (existingBtn) {
-            existingBtn.remove();
+// Create light button with SVG icon (FIXED VERSION)
+function createLightButton(config) {
+    const existingBtn = document.getElementById(config.id);
+    if (existingBtn) existingBtn.remove();
+
+    const button = document.createElement('button');
+    button.id = config.id;
+    button.className = 'light-button';
+    button.dataset.type = config.type || 'toggle';
+    button.dataset.entityId = config.entityId || '';
+    
+    // Store icon name for later
+    button.dataset.icon = config.iconClass || 'light-bulb-1.svg';
+    
+    // Create icon container
+    const iconContainer = document.createElement('div');
+    iconContainer.className = 'icon';
+    button.appendChild(iconContainer);
+    
+    // IMPORTANT: Use a microtask delay to ensure DOM is ready
+    setTimeout(() => {
+        if (window.SVGIcons) {
+            window.SVGIcons.setIconImmediately(button, config.iconClass || 'light-bulb-1.svg');
         }
+    }, 0);
 
-        const button = document.createElement('button');
-        button.id = config.id;
-        button.className = 'light-button';
-        button.dataset.type = config.type || 'toggle';
-        button.dataset.entityId = config.entityId || '';
-
-        // Set icon
-        const iconClass = config.iconClass || 'fa-lightbulb';
-        button.innerHTML = `<i class="icon fas ${iconClass}"></i>`;
-
-        // Add event listeners
-        setupButtonEventListeners(button, config);
-
-        panElement.appendChild(button);
-        return button;
+    setupButtonEventListeners(button, config);
+    
+    // Append to pan layer
+    const panLayer = document.getElementById('panLayer');
+    if (panLayer) {
+        panLayer.appendChild(button);
     }
+    
+    return button;
+}
 
     // Set up button event listeners
     function setupButtonEventListeners(button, config) {
@@ -334,8 +359,7 @@ window.buttons = (function () {
         button.addEventListener('click', (e) => {
             if (!isEditMode && callbacks.toggleLight) {
                 e.stopPropagation();
-
-                const currentEntity = button.dataset.entityId; // ✅ always latest
+                const currentEntity = button.dataset.entityId;
                 callbacks.toggleLight(currentEntity, config.id);
             }
         });
@@ -384,7 +408,7 @@ window.buttons = (function () {
             }
 
             longPressTimer = null;
-        }, 600); // 600ms for long press
+        }, 600);
 
         // Add mouse move listener to detect drag
         const mouseMoveHandler = (moveEvent) => {
@@ -505,26 +529,25 @@ window.buttons = (function () {
     }
 
     // Show edit modal
-// Show edit modal
-function showEditModal(config) {
-    editingButtonId = config.id;
-    // Set the editing button ID so it's accessible to the modal
-    window.buttons.setEditingButtonId(config.id);
-    
-    // Also set a global reference for other modules
-    window.currentEditingButton = {
-        id: config.id,
-        type: config.type || 'toggle'
-    };
+    function showEditModal(config) {
+        editingButtonId = config.id;
+        // Set the editing button ID so it's accessible to the modal
+        window.buttons.setEditingButtonId(config.id);
+        
+        // Also set a global reference for other modules
+        window.currentEditingButton = {
+            id: config.id,
+            type: config.type || 'toggle'
+        };
 
-    // Fill form with current values
-    document.getElementById('editEntityId').value = config.entityId || '';
-    document.getElementById('editName').value = config.name || '';
-    document.getElementById('editIcon').value = config.iconClass || 'fa-lightbulb';
+        // Fill form with current values
+        document.getElementById('editEntityId').value = config.entityId || '';
+        document.getElementById('editName').value = config.name || '';
+        document.getElementById('editIcon').value = config.iconClass || 'light-bulb-1.svg';
 
-    // Show modal
-    document.getElementById('buttonEditModal').style.display = 'flex';
-}
+        // Show modal
+        document.getElementById('buttonEditModal').style.display = 'flex';
+    }
 
     // Set up modal listeners
     function setupModalListeners() {
@@ -539,7 +562,7 @@ function showEditModal(config) {
             editingButtonId = null;
         });
 
-        // Button type selection - UPDATED WITH CCT AND RGB
+        // Button type selection
         document.querySelectorAll('.button-type-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -604,7 +627,7 @@ function showEditModal(config) {
             });
         });
 
-        // Edit form submission - UPDATED WITH CCT AND RGB SUPPORT
+        // Edit form submission
         const editForm = document.getElementById('buttonEditForm');
         if (editForm) {
             editForm.addEventListener('submit', (e) => {
@@ -654,7 +677,7 @@ function showEditModal(config) {
             });
         }
 
-        // Delete button - UPDATED WITH CCT AND RGB SUPPORT
+        // Delete button
         document.getElementById('deleteBtn')?.addEventListener('click', () => {
             if (editingButtonId && confirm('Are you sure you want to delete this button?')) {
                 // Check button type and route to appropriate module
@@ -721,10 +744,7 @@ function showEditModal(config) {
         updateButtonConfig,
         deleteButton,
         updateButtonPositions,
-
-        // NEW PUBLIC ACCESSORS
         setEditingButtonId: (id) => { editingButtonId = id; },
         getEditingButtonId: () => editingButtonId
     };
-
 })();

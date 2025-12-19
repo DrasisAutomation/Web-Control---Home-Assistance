@@ -1,6 +1,6 @@
 {
   "meta": {
-    "savedAt": "2025-12-18T11:09:40.780Z",
+    "savedAt": "2025-12-19T06:24:41.105Z",
     "version": "2.0",
     "totalButtons": 8
   },
@@ -21,7 +21,7 @@
       "type": "toggle",
       "entityId": "switch.node_89",
       "name": "Bed Light",
-      "iconClass": "fa-lightbulb",
+      "iconClass": "dimmer.svg",
       "position": {
         "x": 0.2685,
         "y": 0.1603
@@ -32,7 +32,7 @@
       "type": "toggle",
       "entityId": "light.pantry_cct_lighr_exp_room_entrance_light",
       "name": "Entrance Light",
-      "iconClass": "fa-lightbulb",
+      "iconClass": "door-opened.svg",
       "position": {
         "x": 0.4481,
         "y": 0.2272
@@ -43,7 +43,7 @@
       "type": "toggle",
       "entityId": "light.row_4",
       "name": "Light",
-      "iconClass": "fa-lightbulb",
+      "iconClass": "door-closed.svg",
       "position": {
         "x": 0.6094,
         "y": 0.2316
@@ -54,7 +54,7 @@
       "type": "toggle",
       "entityId": "light.row_4",
       "name": "Light",
-      "iconClass": "fa-lightbulb",
+      "iconClass": "dimmer.svg",
       "position": {
         "x": 0.2561,
         "y": 0.9454
@@ -106,7 +106,7 @@
         "y": 0.3552
       },
       "brightness": 50,
-      "hue": 225
+      "hue": 28
     }
   ]
 }

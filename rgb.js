@@ -1,4 +1,4 @@
-// rgb.js - RGB Button Module
+// rgb.js - RGB Button Module (COMPLETE FIXED VERSION)
 window.RGBModule = (function () {
     'use strict';
 
@@ -316,41 +316,6 @@ window.RGBModule = (function () {
         closeRGBBtn = document.getElementById('closeRGBBtn');
     }
 
-    // Convert HSL to RGB
-    function hslToRgb(h, s, l) {
-        h /= 360;
-        s /= 100;
-        l /= 100;
-        
-        let r, g, b;
-        
-        if (s === 0) {
-            r = g = b = l;
-        } else {
-            const hue2rgb = (p, q, t) => {
-                if (t < 0) t += 1;
-                if (t > 1) t -= 1;
-                if (t < 1/6) return p + (q - p) * 6 * t;
-                if (t < 1/2) return q;
-                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-                return p;
-            };
-            
-            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-            const p = 2 * l - q;
-            
-            r = hue2rgb(p, q, h + 1/3);
-            g = hue2rgb(p, q, h);
-            b = hue2rgb(p, q, h - 1/3);
-        }
-        
-        return [
-            Math.round(r * 255),
-            Math.round(g * 255),
-            Math.round(b * 255)
-        ];
-    }
-
     // Initialize the module
     function init(cb) {
         callbacks = cb || {};
@@ -403,7 +368,7 @@ window.RGBModule = (function () {
             type: 'rgb',
             entityId: rgb.entityId || '',
             name: rgb.name || 'RGB Light',
-            iconClass: rgb.iconClass || 'fa-lightbulb',
+            iconClass: rgb.iconClass || 'light-bulb-1.svg',
             position: {
                 x: Number(rgb.position.x.toFixed(4)),
                 y: Number(rgb.position.y.toFixed(4))
@@ -424,7 +389,7 @@ window.RGBModule = (function () {
 
         // Set defaults
         config.type = 'rgb';
-        config.iconClass = config.iconClass || 'fa-lightbulb';
+        config.iconClass = config.iconClass || 'light-bulb-1.svg';
         config.name = config.name || 'RGB Light';
         config.brightness = config.brightness || 50;
         config.hue = config.hue || 180;
@@ -443,7 +408,6 @@ window.RGBModule = (function () {
         return config.id;
     }
 
-    // Create RGB button DOM element
     function createRGBButton(config) {
         // Remove existing if present
         const existing = document.getElementById(config.id);
@@ -456,9 +420,15 @@ window.RGBModule = (function () {
         button.dataset.brightness = config.brightness;
         button.dataset.hue = config.hue;
         button.dataset.type = 'rgb';
+        button.dataset.icon = config.iconClass || 'light-bulb-1.svg';
 
-        // Simple button with just icon
-        button.innerHTML = `<i class="icon fas ${config.iconClass}"></i>`;
+        // Create icon container
+        button.innerHTML = `<div class="icon"></div>`;
+
+        // Set SVG icon
+        if (window.SVGIcons) {
+            window.SVGIcons.setIconImmediately(button, config.iconClass || 'light-bulb-1.svg');
+        }
 
         // Set initial state
         if (config.isOn && config.brightness > 0) {
@@ -467,6 +437,11 @@ window.RGBModule = (function () {
         } else {
             button.classList.remove('on');
             button.classList.add('off');
+        }
+
+        // Update icon color based on state
+        if (window.SVGIcons && window.SVGIcons.updateIconColor) {
+            window.SVGIcons.updateIconColor(button);
         }
 
         // Add event listeners
@@ -715,61 +690,62 @@ window.RGBModule = (function () {
         document.addEventListener('touchend', dragEndHandler);
     }
 
-// Stop dragging
-function stopDrag() {
-    isDragging = false;
-    
-    // Clear selection when drag ends
-    if (currentRGB) {
-        const btn = document.getElementById(currentRGB.id);
-        if (btn) btn.classList.remove('selected');
-    }
-    
-    // Reset all RGB buttons cursor
-    rgbButtons.forEach(config => {
-        const btn = document.getElementById(config.id);
-        if (btn) {
-            btn.classList.remove('dragging');
-            btn.style.cursor = 'grab';
+    // Stop dragging
+    function stopDrag() {
+        isDragging = false;
+        
+        // Clear selection when drag ends
+        if (currentRGB) {
+            const btn = document.getElementById(currentRGB.id);
+            if (btn) btn.classList.remove('selected');
         }
-    });
-}
-// Show edit modal for RGB
-function showEditModal(config) {
-    console.log('RGB: Opening edit modal for:', config.id, 'type: rgb');
-    
-    // Mark button as selected
-    if (window.selectButtonForEdit) {
-        window.selectButtonForEdit(config.id, 'rgb');
+        
+        // Reset all RGB buttons cursor
+        rgbButtons.forEach(config => {
+            const btn = document.getElementById(config.id);
+            if (btn) {
+                btn.classList.remove('dragging');
+                btn.style.cursor = 'grab';
+            }
+        });
     }
-    
-    // Fill the edit form
-    const editEntityId = document.getElementById('editEntityId');
-    const editName = document.getElementById('editName');
-    const editIcon = document.getElementById('editIcon');
-    
-    if (editEntityId) editEntityId.value = config.entityId || '';
-    if (editName) editName.value = config.name || 'RGB Light';
-    if (editIcon) editIcon.value = config.iconClass || 'fa-lightbulb';
-    
-    // Store which button we're editing
-    window.currentEditingButton = config.id;
-    window.currentEditingType = 'rgb';
-    
-    // Also set in buttons module
-    if (window.buttons && window.buttons.setEditingButtonId) {
-        window.buttons.setEditingButtonId(config.id);
+
+    // Show edit modal for RGB
+    function showEditModal(config) {
+        console.log('RGB: Opening edit modal for:', config.id, 'type: rgb');
+        
+        // Mark button as selected
+        if (window.selectButtonForEdit) {
+            window.selectButtonForEdit(config.id, 'rgb');
+        }
+        
+        // Fill the edit form
+        const editEntityId = document.getElementById('editEntityId');
+        const editName = document.getElementById('editName');
+        const editIcon = document.getElementById('editIcon');
+        
+        if (editEntityId) editEntityId.value = config.entityId || '';
+        if (editName) editName.value = config.name || 'RGB Light';
+        if (editIcon) editIcon.value = config.iconClass || 'light-bulb-1.svg';
+        
+        // Store which button we're editing
+        window.currentEditingButton = config.id;
+        window.currentEditingType = 'rgb';
+        
+        // Also set in buttons module
+        if (window.buttons && window.buttons.setEditingButtonId) {
+            window.buttons.setEditingButtonId(config.id);
+        }
+        
+        // Show modal
+        const modal = document.getElementById('buttonEditModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            console.log('RGB: Modal displayed');
+        } else {
+            console.error('RGB: Edit modal not found');
+        }
     }
-    
-    // Show modal
-    const modal = document.getElementById('buttonEditModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        console.log('RGB: Modal displayed');
-    } else {
-        console.error('RGB: Edit modal not found');
-    }
-}
 
     // Update RGB button UI
     function updateRGBUI(button, brightness, isOn) {
@@ -783,6 +759,11 @@ function showEditModal(config) {
         } else {
             button.classList.remove('on');
             button.classList.add('off');
+        }
+
+        // Update icon color
+        if (window.SVGIcons && window.SVGIcons.updateIconColor) {
+            window.SVGIcons.updateIconColor(button);
         }
     }
 
@@ -971,70 +952,75 @@ function showEditModal(config) {
         return rgbButtons;
     }
 
-// Update button config
-function updateConfig(buttonId, newConfig) {
-    const index = rgbButtons.findIndex(b => b.id === buttonId);
-    if (index === -1) return false;
+    // Update button config
+    function updateConfig(buttonId, newConfig) {
+        const index = rgbButtons.findIndex(b => b.id === buttonId);
+        if (index === -1) return false;
 
-    const btnData = rgbButtons[index];
-    const oldEntityId = btnData.entityId;
+        const btnData = rgbButtons[index];
+        const oldEntityId = btnData.entityId;
 
-    // ✅ UPDATE STORED DATA (CRITICAL)
-    Object.assign(btnData, newConfig);
+        // UPDATE STORED DATA
+        Object.assign(btnData, newConfig);
 
-    const btn = document.getElementById(buttonId);
-    if (!btn) return false;
+        const btn = document.getElementById(buttonId);
+        if (!btn) return false;
 
-    /* ---------- ICON ---------- */
-    if (newConfig.iconClass) {
-        const icon = btn.querySelector('.icon');
-        icon.className = `icon fas ${newConfig.iconClass}`;
-    }
-
-    /* ---------- NAME ---------- */
-    if (newConfig.name) {
-        btn.dataset.name = newConfig.name;
-        btn.title = newConfig.name;
-    }
-
-    /* ---------- ENTITY SYNC ---------- */
-    if (newConfig.entityId && newConfig.entityId !== oldEntityId) {
-
-        // remove from old entity
-        if (oldEntityId && window.EntityButtons?.[oldEntityId]) {
-            window.EntityButtons[oldEntityId] =
-                window.EntityButtons[oldEntityId].filter(b => b.id !== buttonId);
-        }
-
-        // add to new entity
-        if (!window.EntityButtons) window.EntityButtons = {};
-        if (!window.EntityButtons[newConfig.entityId]) {
-            window.EntityButtons[newConfig.entityId] = [];
-        }
-
-        const entityButton = {
-            id: buttonId,
-            entityId: newConfig.entityId,
-            isOn: false,
-            updateUI() {
-                const el = document.getElementById(this.id);
-                if (!el) return;
-                el.classList.toggle('on', this.isOn);
-            },
-            handleStateUpdate(state) {
-                this.isOn = state === 'on';
-                this.updateUI();
+        // ICON UPDATE
+        if (newConfig.iconClass) {
+            // Clear and set new icon
+            if (window.SVGIcons) {
+                window.SVGIcons.clearButtonIcons(btn);
+                window.SVGIcons.setIconImmediately(btn, newConfig.iconClass);
             }
-        };
+            btn.dataset.icon = newConfig.iconClass;
+        }
 
-        window.EntityButtons[newConfig.entityId].push(entityButton);
-        btn.dataset.entityId = newConfig.entityId;
+        // NAME UPDATE
+        if (newConfig.name) {
+            btn.dataset.name = newConfig.name;
+            btn.title = newConfig.name;
+        }
+
+        // ENTITY SYNC
+        if (newConfig.entityId && newConfig.entityId !== oldEntityId) {
+            // remove from old entity
+            if (oldEntityId && window.EntityButtons?.[oldEntityId]) {
+                window.EntityButtons[oldEntityId] =
+                    window.EntityButtons[oldEntityId].filter(b => b.id !== buttonId);
+            }
+
+            // add to new entity
+            if (!window.EntityButtons) window.EntityButtons = {};
+            if (!window.EntityButtons[newConfig.entityId]) {
+                window.EntityButtons[newConfig.entityId] = [];
+            }
+
+            const entityButton = {
+                id: buttonId,
+                entityId: newConfig.entityId,
+                isOn: false,
+                updateUI() {
+                    const el = document.getElementById(this.id);
+                    if (!el) return;
+                    el.classList.toggle('on', this.isOn);
+                    if (window.SVGIcons && window.SVGIcons.updateIconColor) {
+                        window.SVGIcons.updateIconColor(el);
+                    }
+                },
+                handleStateUpdate(state) {
+                    this.isOn = state === 'on';
+                    this.updateUI();
+                }
+            };
+
+            window.EntityButtons[newConfig.entityId].push(entityButton);
+            btn.dataset.entityId = newConfig.entityId;
+        }
+
+        saveToLocalStorage();
+        return true;
     }
-
-    saveToLocalStorage();
-    return true;
-}
-
 
     // Delete button
     function deleteButton(buttonId) {

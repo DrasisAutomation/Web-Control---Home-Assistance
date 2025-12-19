@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Center the button */
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: transparent;
+        }
+
+        .toggle-button {
+            width: 40px;
+            height: 40px;
+            background-color: white;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 0;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+        }
+
+        .toggle-button:hover {
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .toggle-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .toggle-button.on {
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.8);
+        }
+
+        .toggle-button .icon {
+            font-size: 18px;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-button.on .icon {
+            color: #007bff;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 400px;
+            height: 400px;
+            padding: 20px 15px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #000000;
+            z-index: 1001;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .close-modal:hover {
+            color: #000000;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        .brightness-container {
+            width: 100%;
+            height: 100%;
+            margin-top: -15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .wrapper {
+            position: relative;
+            height: 20rem;
+            width: 3rem;
+        }
+
+        /* REMOVED PLUS AND MINUS SIGNS */
+        .wrapper::before,
+        .wrapper::after {
+            display: none; /* Remove plus and minus signs */
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            background-color: rgba(0, 123, 255, 0.3);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 18rem;
+            height: 3.5rem;
+            transform: translate(-50%, -50%) rotate(-90deg);
+            border-radius: 1rem;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 0;
+            box-shadow: -20rem 0 0 20rem rgba(0, 123, 255, 0.7);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 0;
+            box-shadow: -20rem 0 0 20rem rgba(0, 123, 255, 0.7);
+            border: none;
+        }
+
+        /* Brightness percentage display at bottom */
+        .brightness-percentage {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: #000000;
+            font-size: 15px; /* Larger font size */
+            font-family: Arial, sans-serif;
+        }
+
+        .modal-title-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: black;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+    <button class="toggle-button" id="toggleBtn" disabled>
+        <i class="fas fa-sliders-h icon" id="bulbIcon"></i>
+    </button>
+
+    <!-- Position Modal for Curtain -->
+    <div class="modal-overlay" id="brightnessModal">
+        <div class="modal-content">
+            <div class="modal-title-text">Curtain Controls</div>
+
+            <button class="close-modal" id="closeModal">&times;</button>
+
+            <div class="brightness-container">
+                <div class="wrapper">
+                    <input type="range" min="0" max="100" value="50" id="brightnessSlider" />
+                </div>
+            </div>
+
+            <div class="brightness-percentage" id="brightnessValue">50%</div>
+        </div>
+    </div>
+
+<script>
+function makeTest21Draggable(btn) {
+    let isDrag = false, startX, startY, origX, origY;
+
+    btn.addEventListener("mousedown", e => {
+        isDrag = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        origX = btn.offsetLeft;
+        origY = btn.offsetTop;
+        btn.style.cursor = "grabbing";
+        e.stopPropagation();
+    });
+
+    window.addEventListener("mousemove", e => {
+        if (!isDrag) return;
+        let dx = e.clientX - startX;
+        let dy = e.clientY - startY;
+        btn.style.left = (origX + dx) + "px";
+        btn.style.top = (origY + dy) + "px";
+    });
+
+    window.addEventListener("mouseup", () => {
+        isDrag = false;
+        btn.style.cursor = "grab";
+    });
+}
+</script>
+
+<script>
+    const WS_URL = "wss://demo.lumihomepro1.com/api/websocket";
+    const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzNGNlNThiNDk1Nzk0NDVmYjUxNzE2NDA0N2Q0MGNmZCIsImlhdCI6MTc2NTM0NzQ5MSwiZXhwIjoyMDgwNzA3NDkxfQ.Se5PGwx0U9aqyVRnD1uwvCv3F-aOE8H53CKA5TqsV7U";
+    const COVER = "cover.your_curtain_entity"; // CHANGE THIS TO YOUR CURTAIN ENTITY ID
+
+    let ws, ready = false, currentPosition = 50;
+    const toggleBtn = document.getElementById('toggleBtn');
+    const bulbIcon = document.getElementById('bulbIcon');
+    const brightnessModal = document.getElementById('brightnessModal');
+    const closeModal = document.getElementById('closeModal');
+    const brightnessSlider = document.getElementById('brightnessSlider');
+    const brightnessValue = document.getElementById('brightnessValue');
+
+    // Connect to WebSocket
+    function connectWebSocket() {
+        ws = new WebSocket(WS_URL);
+
+        ws.onopen = () => {
+            console.log("WebSocket connected");
+            ws.send(JSON.stringify({ type: "auth", access_token: TOKEN }));
+        };
+
+        ws.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            console.log("Message:", data.type);
+
+            if (data.type === "auth_ok") {
+                console.log("Authentication successful");
+                ready = true;
+                toggleBtn.disabled = false;
+
+                // Get initial state
+                setTimeout(() => {
+                    ws.send(JSON.stringify({
+                        id: 1,
+                        type: "get_states"
+                    }));
+
+                    // Subscribe to changes
+                    setTimeout(() => {
+                        ws.send(JSON.stringify({
+                            id: 2,
+                            type: "subscribe_events",
+                            event_type: "state_changed"
+                        }));
+                    }, 100);
+                }, 100);
+            }
+            else if (data.type === "result" && data.id === 1) {
+                if (data.success && data.result) {
+                    const curtain = data.result.find(e => e.entity_id === COVER);
+                    if (curtain) {
+                        // Get curtain position (0-100)
+                        if (curtain.attributes && curtain.attributes.current_position !== undefined) {
+                            currentPosition = curtain.attributes.current_position;
+                        } else {
+                            currentPosition = 50;
+                        }
+
+                        brightnessSlider.value = currentPosition;
+                        brightnessValue.textContent = `${currentPosition}%`;
+                    }
+                }
+            }
+            else if (data.type === "event" && data.event?.event_type === "state_changed") {
+                if (data.event.data.entity_id === COVER) {
+                    // Update position if available
+                    if (data.event.data.new_state.attributes && 
+                        data.event.data.new_state.attributes.current_position !== undefined) {
+                        currentPosition = data.event.data.new_state.attributes.current_position;
+                        brightnessSlider.value = currentPosition;
+                        brightnessValue.textContent = `${currentPosition}%`;
+                    }
+                }
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error("WebSocket error:", error);
+            toggleBtn.disabled = true;
+        };
+
+        ws.onclose = () => {
+            console.log("WebSocket disconnected");
+            toggleBtn.disabled = true;
+            ready = false;
+            setTimeout(connectWebSocket, 3000);
+        };
+    }
+
+    // Open position modal
+    function openPositionModal() {
+        brightnessModal.style.display = 'flex';
+    }
+
+    // Close position modal
+    function closePositionModal() {
+        brightnessModal.style.display = 'none';
+    }
+
+    // Update curtain position via WebSocket
+    function updatePosition(position) {
+        if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
+            console.log("Not ready to update curtain");
+            return;
+        }
+
+        ws.send(JSON.stringify({
+            id: Date.now(),
+            type: "call_service",
+            domain: "cover",
+            service: "set_cover_position",
+            service_data: {
+                entity_id: COVER,
+                position: position
+            }
+        }));
+
+        console.log(`Curtain position updated to ${position}%`);
+    }
+
+    // Update icon based on position
+    function updateIcon() {
+        if (currentPosition > 66) {
+            bulbIcon.className = "fas fa-chevron-up icon";
+        } else if (currentPosition < 33) {
+            bulbIcon.className = "fas fa-chevron-down icon";
+        } else {
+            bulbIcon.className = "fas fa-sliders-h icon";
+        }
+    }
+
+    // Event Listeners
+    toggleBtn.addEventListener('click', openPositionModal);
+
+    closeModal.addEventListener('click', closePositionModal);
+
+    // Close modal when clicking outside
+    brightnessModal.addEventListener('click', (e) => {
+        if (e.target === brightnessModal) {
+            closePositionModal();
+        }
+    });
+
+    // Update position value display while dragging (UI only)
+    brightnessSlider.addEventListener('input', (e) => {
+        currentPosition = parseInt(e.target.value);
+        brightnessValue.textContent = `${currentPosition}%`;
+        updateIcon();
+    });
+
+    // Update position only when slider is released
+    brightnessSlider.addEventListener('change', (e) => {
+        currentPosition = parseInt(e.target.value);
+        brightnessValue.textContent = `${currentPosition}%`;
+        updateIcon();
+        updatePosition(currentPosition);
+    });
+
+    // Start connection
+    connectWebSocket();
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && brightnessModal.style.display === 'flex') {
+            closePositionModal();
+        }
+    });
+
+    // Make button draggable
+    makeTest21Draggable(toggleBtn);
+    
+    // Initial icon update
+    window.addEventListener('load', () => {
+        updateIcon();
+    });
+</script>
+</body>
+</html>

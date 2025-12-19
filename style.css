@@ -740,3 +740,155 @@ body {
 .footer span{
     display: none !important;
 }
+
+/* Remove all FontAwesome icon styles */
+.light-button .fa,
+.light-button .fas,
+.light-button .far,
+.light-button .fal,
+.light-button .fad,
+.light-button .fab {
+    display: none !important;
+}
+
+/* SVG Icon Styles */
+.light-button .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.light-button .icon .svg-icon {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+    transition: fill 0.3s ease;
+}
+
+/* Default (off) state */
+.light-button .icon .svg-icon {
+    fill: #666;
+}
+
+/* On state */
+.light-button.on .icon .svg-icon {
+    fill: #ffcc00;
+}
+
+/* Edit mode */
+.edit-mode .light-button .icon .svg-icon {
+    fill: #4CAF50;
+}
+
+.edit-mode .light-button:hover .icon .svg-icon {
+    fill: #f44336;
+}
+
+/* REMOVE ALL FontAwesome references from buttons */
+.light-button .fas,
+.light-button .fa,
+.light-button .far,
+.light-button .fal,
+.light-button .fad,
+.light-button .fab,
+.light-button i[class*="fa-"] {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* SVG Icon Container */
+.light-button .icon {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100% !important;
+    height: 100% !important;
+    position: relative;
+}
+
+/* SVG Icon Element */
+.light-button .icon .svg-icon {
+    width: 24px !important;
+    height: 24px !important;
+    display: block !important;
+    fill: currentColor !important;
+    color: inherit !important;
+    transition: color 0.3s ease !important;
+    pointer-events: none;
+}
+
+/* Default state (OFF) - Gray color */
+.light-button:not(.on) .icon .svg-icon {
+    color: #666 !important;
+    fill: #666 !important;
+}
+
+/* ON state - Yellow color */
+.light-button.on .icon .svg-icon {
+    color: #ffcc00 !important;
+    fill: #ffcc00 !important;
+}
+
+/* Edit mode states */
+.edit-mode .light-button .icon .svg-icon {
+    color: #4CAF50 !important;
+    fill: #4CAF50 !important;
+}
+
+.edit-mode .light-button:hover .icon .svg-icon {
+    color: #f44336 !important;
+    fill: #f44336 !important;
+}
+
+/* Force black fill to be overridden */
+.light-button .icon .svg-icon [fill="#000000"],
+.light-button .icon .svg-icon [fill="black"],
+.light-button .icon .svg-icon [stroke="#000000"],
+.light-button .icon .svg-icon [stroke="black"] {
+    fill: currentColor !important;
+    stroke: currentColor !important;
+}
+
+.light-button .icon svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor !important;
+    stroke: currentColor !important;
+    color: inherit;
+    display: block;
+}
+/* SVG Icon Styles */
+.svg-icon {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    margin: auto !important;
+    transition: color 0.3s ease, fill 0.3s ease, stroke 0.3s ease;
+}
+
+.light-button .icon {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Ensure proper coloring */
+.light-button.on .svg-icon {
+    color: #ffcc00 !important;
+    fill: #ffcc00 !important;
+}
+
+.light-button.off .svg-icon {
+    color: #666666 !important;
+    fill: #666666 !important;
+}
+
+/* Remove any default button icon styles */
+.light-button:before,
+.light-button:after {
+    display: none !important;
+}

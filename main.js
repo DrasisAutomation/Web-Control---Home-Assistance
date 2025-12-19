@@ -1136,6 +1136,10 @@ document.addEventListener("DOMContentLoaded", () => {
             isEditMode = !isEditMode;
 
             if (isEditMode) {
+                // Fix icons when entering edit mode
+                setTimeout(fixAllButtonIcons, 100);
+            }
+            if (isEditMode) {
                 editBtn.textContent = '✓ Done';
                 editBtn.classList.add('edit-mode');
                 container.classList.add('edit-mode');
@@ -1273,82 +1277,82 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-// In main.js - replace the form submission handler
-document.getElementById("buttonEditForm").addEventListener("submit", function (e) {
-    e.preventDefault();
-    console.log('Form submitted');
+    // In main.js - replace the form submission handler
+    document.getElementById("buttonEditForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+        console.log('Form submitted');
 
-    const entityId = document.getElementById("editEntityId").value.trim();
-    const name = document.getElementById("editName").value.trim();
-    const icon = document.getElementById("editIcon").value;
+        const entityId = document.getElementById("editEntityId").value.trim();
+        const name = document.getElementById("editName").value.trim();
+        const icon = document.getElementById("editIcon").value;
 
-    console.log('Form values:', { entityId, name, icon });
+        console.log('Form values:', { entityId, name, icon });
 
-    // Get the button ID that's being edited
-    const btnId = window.currentEditingButton;
-    const btnType = window.currentEditingType;
+        // Get the button ID that's being edited
+        const btnId = window.currentEditingButton;
+        const btnType = window.currentEditingType;
 
-    console.log('Editing button:', btnId, 'type:', btnType);
+        console.log('Editing button:', btnId, 'type:', btnType);
 
-    if (!btnId) {
-        alert("No button selected.");
-        console.error('No button selected');
-        return;
-    }
+        if (!btnId) {
+            alert("No button selected.");
+            console.error('No button selected');
+            return;
+        }
 
-    if (!entityId) {
-        alert("Entity ID is required.");
-        console.error('Entity ID is required');
-        return;
-    }
+        if (!entityId) {
+            alert("Entity ID is required.");
+            console.error('Entity ID is required');
+            return;
+        }
 
-    // Determine which module to update based on button type
-    if (btnType === 'dimmer' && window.DimmerModule) {
-        console.log('Updating dimmer button:', btnId);
-        const success = DimmerModule.updateConfig(btnId, {
-            entityId: entityId,
-            name: name || 'Dimmer',
-            iconClass: icon
-        });
-        console.log('Dimmer update result:', success);
-    } else if (btnType === 'cct' && window.CCTModule) {
-        console.log('Updating CCT button:', btnId);
-        const success = CCTModule.updateConfig(btnId, {
-            entityId: entityId,
-            name: name || 'CCT Light',
-            iconClass: icon
-        });
-        console.log('CCT update result:', success);
-    } else if (btnType === 'rgb' && window.RGBModule) {
-        console.log('Updating RGB button:', btnId);
-        const success = RGBModule.updateConfig(btnId, {
-            entityId: entityId,
-            name: name || 'RGB Light',
-            iconClass: icon
-        });
-        console.log('RGB update result:', success);
-    } else {
-        console.log('Updating regular button:', btnId);
-        const success = buttons.updateButtonConfig(btnId, {
-            entityId: entityId,
-            name: name || 'Button',
-            iconClass: icon
-        });
-        console.log('Regular button update result:', success);
-    }
+        // Determine which module to update based on button type
+        if (btnType === 'dimmer' && window.DimmerModule) {
+            console.log('Updating dimmer button:', btnId);
+            const success = DimmerModule.updateConfig(btnId, {
+                entityId: entityId,
+                name: name || 'Dimmer',
+                iconClass: icon
+            });
+            console.log('Dimmer update result:', success);
+        } else if (btnType === 'cct' && window.CCTModule) {
+            console.log('Updating CCT button:', btnId);
+            const success = CCTModule.updateConfig(btnId, {
+                entityId: entityId,
+                name: name || 'CCT Light',
+                iconClass: icon
+            });
+            console.log('CCT update result:', success);
+        } else if (btnType === 'rgb' && window.RGBModule) {
+            console.log('Updating RGB button:', btnId);
+            const success = RGBModule.updateConfig(btnId, {
+                entityId: entityId,
+                name: name || 'RGB Light',
+                iconClass: icon
+            });
+            console.log('RGB update result:', success);
+        } else {
+            console.log('Updating regular button:', btnId);
+            const success = buttons.updateButtonConfig(btnId, {
+                entityId: entityId,
+                name: name || 'Button',
+                iconClass: icon
+            });
+            console.log('Regular button update result:', success);
+        }
 
-    // Close modal
-    document.getElementById("buttonEditModal").style.display = "none";
-    
-    // Clear selection
-    if (window.currentEditingButton) {
-        const btn = document.getElementById(window.currentEditingButton);
-        if (btn) btn.classList.remove('selected');
-    }
-    
-    window.currentEditingButton = null;
-    window.currentEditingType = null;
-});
+        // Close modal
+        document.getElementById("buttonEditModal").style.display = "none";
+
+        // Clear selection
+        if (window.currentEditingButton) {
+            const btn = document.getElementById(window.currentEditingButton);
+            if (btn) btn.classList.remove('selected');
+        }
+
+        window.currentEditingButton = null;
+        window.currentEditingType = null;
+    });
 
     document.getElementById('closeEditBtn')?.addEventListener('click', () => {
         document.getElementById('buttonEditModal').style.display = 'none';
@@ -1821,10 +1825,59 @@ document.getElementById("buttonEditForm").addEventListener("submit", function (e
             }
         }, { passive: false });
     }
+function fixAllIconsGlobally() {
+    console.log('Performing global icon fix...');
+    
+    // Wait for everything to load
+    setTimeout(() => {
+        if (window.SVGIcons && window.SVGIcons.fixAllButtonIcons) {
+            window.SVGIcons.fixAllButtonIcons();
+        }
+        
+        // Additional cleanup
+        document.querySelectorAll('.light-button').forEach(button => {
+            // Remove any duplicate SVGs
+            const svgs = button.querySelectorAll('.svg-icon');
+            if (svgs.length > 1) {
+                for (let i = 1; i < svgs.length; i++) {
+                    svgs[i].remove();
+                }
+            }
+            
+            // Remove any FontAwesome remnants
+            const faIcons = button.querySelectorAll('.fas, .fa, .far, .fal, .fad, .fab');
+            faIcons.forEach(icon => icon.remove());
+            
+            // Ensure only one icon container
+            let iconContainer = button.querySelector('.icon');
+            if (!iconContainer) {
+                iconContainer = document.createElement('div');
+                iconContainer.className = 'icon';
+                button.appendChild(iconContainer);
+            }
+            
+            // Clear and reload icon
+            const iconName = button.dataset.icon || 'light-bulb-1.svg';
+            if (window.SVGIcons) {
+                window.SVGIcons.clearButtonIcons(button);
+                setTimeout(() => {
+                    window.SVGIcons.setIconImmediately(button, iconName);
+                }, 50);
+            }
+        });
+    }, 1000);
+}
 
     function init() {
+
+        // Preload common SVG icons
+        if (window.SVGIcons && window.SVGIcons.preloadIcons) {
+            const commonIcons = ['light-bulb-1.svg', 'dimmer.svg', 'fan.svg', 'door-opened.svg', 'door-closed.svg'];
+            window.SVGIcons.preloadIcons(commonIcons);
+        }
         // Load slider values FIRST
         loadSliderValues();
+    setTimeout(fixAllIconsGlobally, 1500);
 
         // Initialize modules with callbacks
         buttons.init(pan, getImageMetadata, {
@@ -1961,3 +2014,45 @@ if (editBtn) {
         }, 100);
     });
 }
+
+// Function to fix all existing button icons
+function fixAllButtonIcons() {
+    console.log('Fixing all button icons...');
+
+    const allButtons = document.querySelectorAll('.light-button');
+    allButtons.forEach(button => {
+        // Remove any FontAwesome icons
+        const fontAwesomeIcons = button.querySelectorAll('.fas, .fa, .far, .fal, .fad, .fab');
+        fontAwesomeIcons.forEach(icon => icon.remove());
+
+        // Ensure only one icon container
+        let iconContainer = button.querySelector('.icon');
+        if (!iconContainer) {
+            iconContainer = document.createElement('div');
+            iconContainer.className = 'icon';
+            button.appendChild(iconContainer);
+        }
+
+        // Remove duplicate SVGs
+        const svgs = iconContainer.querySelectorAll('.svg-icon');
+        if (svgs.length > 1) {
+            // Keep only the first SVG
+            for (let i = 1; i < svgs.length; i++) {
+                svgs[i].remove();
+            }
+        }
+
+        // Get icon from data attribute and reload if needed
+        const iconName = button.dataset.icon || 'light-bulb-1.svg';
+        if (window.SVGIcons) {
+            window.SVGIcons.setIconImmediately(button, iconName);
+        }
+    });
+
+    console.log('Button icons fixed');
+}
+
+// Call this after DOM is loaded and modules are initialized
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(fixAllButtonIcons, 1000); // Fix after 1 second
+});

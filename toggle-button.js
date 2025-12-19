@@ -1,3 +1,4 @@
+// toggle-button.js - Updated for SVG icons
 class ToggleButton {
     constructor(config) {
         this.id = config.id;
@@ -7,13 +8,14 @@ class ToggleButton {
         this.position = config.position || { x: 0.5, y: 0.5 };
         this.entityId = config.entityId;
         this.isOn = false;
+        this.iconClass = config.iconClass || 'light-bulb-1.svg'; // Default SVG
 
         // Register with ButtonManager
         if (window.ButtonManager) {
             window.ButtonManager.registerButton(this);
         }
 
-        // --- NEW: Register buttons by entityId ---
+        // Register buttons by entityId
         if (!window.EntityButtons) window.EntityButtons = {};
         if (this.entityId) {
             if (!window.EntityButtons[this.entityId]) {
@@ -26,9 +28,63 @@ class ToggleButton {
         if (this.entityId && window.ws && window.ws.readyState === WebSocket.OPEN) {
             this.getInitialState();
         }
+        
+        // Create the button element
+        this.createButton();
     }
 
-    // Update entity ID (NEW METHOD)
+    // Create the button DOM element
+    createButton() {
+        // Remove existing if present
+        const existing = document.getElementById(this.id);
+        if (existing) existing.remove();
+
+        const button = document.createElement('button');
+        button.id = this.id;
+        button.className = 'light-button';
+        button.dataset.type = this.type;
+        button.dataset.entityId = this.entityId || '';
+        button.dataset.icon = this.iconClass;
+
+        // Create icon container for SVG
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'icon';
+        button.appendChild(iconContainer);
+
+        // Set SVG icon immediately
+        if (window.SVGIcons) {
+            window.SVGIcons.setIconImmediately(button, this.iconClass);
+        }
+
+        // Set initial state
+        this.updateUI();
+
+        // Add click handler
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.onClick();
+        });
+
+        // Position button
+        const panLayer = document.getElementById('panLayer');
+        if (panLayer) {
+            panLayer.appendChild(button);
+
+            const img = document.getElementById('viewImage');
+            if (img) {
+                const imgWidth = img.clientWidth;
+                const imgHeight = img.clientHeight;
+
+                button.style.left = `${this.position.x * imgWidth}px`;
+                button.style.top = `${this.position.y * imgHeight}px`;
+            }
+        }
+
+        this.buttonElement = button;
+        return button;
+    }
+
+    // Update entity ID
     updateEntityId(newEntityId) {
         // Remove from old entityId group
         if (this.entityId && window.EntityButtons[this.entityId]) {
@@ -47,6 +103,11 @@ class ToggleButton {
                 window.EntityButtons[newEntityId] = [];
             }
             window.EntityButtons[newEntityId].push(this);
+        }
+
+        // Update button element
+        if (this.buttonElement) {
+            this.buttonElement.dataset.entityId = newEntityId;
         }
 
         // Get initial state for new entity
@@ -83,7 +144,7 @@ class ToggleButton {
             service_data: { entity_id: this.entityId }
         }));
 
-        // --- NEW: Optimistic update for ALL buttons with same entity ---
+        // Optimistic update for ALL buttons with same entity
         const newState = !this.isOn;
 
         if (window.EntityButtons[this.entityId]) {
@@ -96,18 +157,21 @@ class ToggleButton {
 
     // Update button UI
     updateUI() {
-        const button = document.getElementById(this.id);
+        const button = this.buttonElement || document.getElementById(this.id);
         if (!button) return;
 
-        const icon = button.querySelector('.icon');
+        // Update on/off class
         if (this.isOn) {
             button.classList.add('on');
-            icon.classList.remove('fa-lightbulb');
-            icon.classList.add('fa-solid', 'fa-lightbulb');
+            button.classList.remove('off');
         } else {
             button.classList.remove('on');
-            icon.classList.remove('fa-solid', 'fa-lightbulb');
-            icon.classList.add('fa-lightbulb');
+            button.classList.add('off');
+        }
+
+        // Update icon color
+        if (window.SVGIcons && window.SVGIcons.updateIconColor) {
+            window.SVGIcons.updateIconColor(button);
         }
     }
 
@@ -126,7 +190,7 @@ class ToggleButton {
         this.isOn = state === "on";
         this.updateUI();
 
-        // --- NEW: Sync all buttons with same entity ---
+        // Sync all buttons with same entity
         if (window.EntityButtons[this.entityId]) {
             window.EntityButtons[this.entityId].forEach(btn => {
                 btn.isOn = this.isOn;
@@ -138,23 +202,22 @@ class ToggleButton {
 
 // Example usage - create toggle buttons
 document.addEventListener("DOMContentLoaded", () => {
-
     const toggleButtons = [
         {
             id: 'light-bedroom',
             name: 'Bed Light',
             label: 'Bed',
             entityId: 'light.row_1_2',
-            position: { x: 0.3, y: 0.5 }
-        },
-        // You can add more buttons here with same or different entityId
+            position: { x: 0.3, y: 0.5 },
+            iconClass: 'light-bulb-1.svg'
+        }
     ];
 
     toggleButtons.forEach(config => {
         new ToggleButton(config);
     });
 
-    // --- NEW: After WebSocket connects, load latest states for all buttons ---
+    // After WebSocket connects, load latest states for all buttons
     if (window.ws) {
         window.ws.addEventListener("open", () => {
             Object.values(window.EntityButtons).forEach(btnList => {

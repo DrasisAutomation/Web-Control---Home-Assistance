@@ -1,5 +1,4 @@
-
-// cct.js - CCT (Color Temperature) Button Module
+// cct.js - CCT (Color Temperature) Button Module (COMPLETE FIXED VERSION)
 window.CCTModule = (function () {
     'use strict';
 
@@ -370,7 +369,7 @@ window.CCTModule = (function () {
             type: 'cct',
             entityId: cct.entityId || '',
             name: cct.name || 'CCT Light',
-            iconClass: cct.iconClass || 'fa-lightbulb',
+            iconClass: cct.iconClass || 'light-bulb-1.svg',
             position: {
                 x: Number(cct.position.x.toFixed(4)),
                 y: Number(cct.position.y.toFixed(4))
@@ -391,7 +390,7 @@ window.CCTModule = (function () {
 
         // Set defaults
         config.type = 'cct';
-        config.iconClass = config.iconClass || 'fa-lightbulb';
+        config.iconClass = config.iconClass || 'light-bulb-1.svg';
         config.name = config.name || 'CCT Light';
         config.brightness = config.brightness || 50;
         config.temperature = config.temperature || 50;
@@ -410,7 +409,6 @@ window.CCTModule = (function () {
         return config.id;
     }
 
-    // Create CCT button DOM element
     function createCCTButton(config) {
         // Remove existing if present
         const existing = document.getElementById(config.id);
@@ -423,9 +421,15 @@ window.CCTModule = (function () {
         button.dataset.brightness = config.brightness;
         button.dataset.temperature = config.temperature;
         button.dataset.type = 'cct';
+        button.dataset.icon = config.iconClass || 'light-bulb-1.svg';
 
-        // Simple button with just icon
-        button.innerHTML = `<i class="icon fas ${config.iconClass}"></i>`;
+        // Create icon container
+        button.innerHTML = `<div class="icon"></div>`;
+
+        // Set SVG icon
+        if (window.SVGIcons) {
+            window.SVGIcons.setIconImmediately(button, config.iconClass || 'light-bulb-1.svg');
+        }
 
         // Set initial state
         if (config.isOn && config.brightness > 0) {
@@ -434,6 +438,11 @@ window.CCTModule = (function () {
         } else {
             button.classList.remove('on');
             button.classList.add('off');
+        }
+
+        // Update icon color based on state
+        if (window.SVGIcons && window.SVGIcons.updateIconColor) {
+            window.SVGIcons.updateIconColor(button);
         }
 
         // Add event listeners
@@ -458,7 +467,7 @@ window.CCTModule = (function () {
         return button;
     }
 
-    // Setup CCT button events (drag and click)
+    // Setup CCT button events (drag and click) - SAME AS DIMMER
     function setupCCTButtonEvents(button, config) {
         let startX = 0;
         let startY = 0;
@@ -468,7 +477,6 @@ window.CCTModule = (function () {
         // Mouse down handler
         button.addEventListener('mousedown', (e) => {
             if (!isEditMode) {
-                // In normal mode, just prevent default
                 e.stopPropagation();
                 e.preventDefault();
                 return;
@@ -610,7 +618,7 @@ window.CCTModule = (function () {
         });
     }
 
-    // Start dragging
+    // Start dragging - SAME AS DIMMER
     function startDrag(e, button, config) {
         isDragging = true;
         button.classList.add('dragging');
@@ -702,42 +710,42 @@ window.CCTModule = (function () {
         });
     }
 
-// Show edit modal for CCT
-function showEditModal(config) {
-    console.log('CCT: Opening edit modal for:', config.id, 'type: cct');
-    
-    // Mark button as selected
-    if (window.selectButtonForEdit) {
-        window.selectButtonForEdit(config.id, 'cct');
+    // Show edit modal for CCT
+    function showEditModal(config) {
+        console.log('CCT: Opening edit modal for:', config.id, 'type: cct');
+        
+        // Mark button as selected
+        if (window.selectButtonForEdit) {
+            window.selectButtonForEdit(config.id, 'cct');
+        }
+        
+        // Fill the edit form
+        const editEntityId = document.getElementById('editEntityId');
+        const editName = document.getElementById('editName');
+        const editIcon = document.getElementById('editIcon');
+        
+        if (editEntityId) editEntityId.value = config.entityId || '';
+        if (editName) editName.value = config.name || 'CCT Light';
+        if (editIcon) editIcon.value = config.iconClass || 'light-bulb-1.svg';
+        
+        // Store which button we're editing
+        window.currentEditingButton = config.id;
+        window.currentEditingType = 'cct';
+        
+        // Also set in buttons module
+        if (window.buttons && window.buttons.setEditingButtonId) {
+            window.buttons.setEditingButtonId(config.id);
+        }
+        
+        // Show modal
+        const modal = document.getElementById('buttonEditModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            console.log('CCT: Modal displayed');
+        } else {
+            console.error('CCT: Edit modal not found');
+        }
     }
-    
-    // Fill the edit form
-    const editEntityId = document.getElementById('editEntityId');
-    const editName = document.getElementById('editName');
-    const editIcon = document.getElementById('editIcon');
-    
-    if (editEntityId) editEntityId.value = config.entityId || '';
-    if (editName) editName.value = config.name || 'CCT Light';
-    if (editIcon) editIcon.value = config.iconClass || 'fa-lightbulb';
-    
-    // Store which button we're editing
-    window.currentEditingButton = config.id;
-    window.currentEditingType = 'cct';
-    
-    // Also set in buttons module
-    if (window.buttons && window.buttons.setEditingButtonId) {
-        window.buttons.setEditingButtonId(config.id);
-    }
-    
-    // Show modal
-    const modal = document.getElementById('buttonEditModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        console.log('CCT: Modal displayed');
-    } else {
-        console.error('CCT: Edit modal not found');
-    }
-}
 
     // Update CCT button UI
     function updateCCTUI(button, brightness, isOn) {
@@ -751,6 +759,11 @@ function showEditModal(config) {
         } else {
             button.classList.remove('on');
             button.classList.add('off');
+        }
+
+        // Update icon color
+        if (window.SVGIcons && window.SVGIcons.updateIconColor) {
+            window.SVGIcons.updateIconColor(button);
         }
     }
 
@@ -949,67 +962,73 @@ function showEditModal(config) {
         return cctButtons;
     }
 
-function updateConfig(buttonId, newConfig) {
-    const index = cctButtons.findIndex(b => b.id === buttonId);
-    if (index === -1) return false;
+    // Update button config (FIXED FOR ICONS)
+    function updateConfig(buttonId, newConfig) {
+        const index = cctButtons.findIndex(b => b.id === buttonId);
+        if (index === -1) return false;
 
-    const btnData = cctButtons[index];
-    const oldEntityId = btnData.entityId;
+        const btnData = cctButtons[index];
+        const oldEntityId = btnData.entityId;
 
-    // ✅ UPDATE STORED DATA (CRITICAL)
-    Object.assign(btnData, newConfig);
+        // UPDATE STORED DATA
+        Object.assign(btnData, newConfig);
 
-    const btn = document.getElementById(buttonId);
-    if (!btn) return false;
+        const btn = document.getElementById(buttonId);
+        if (!btn) return false;
 
-    // ✅ ICON
-    if (newConfig.iconClass) {
-        const icon = btn.querySelector('.icon');
-        icon.className = `icon fas ${newConfig.iconClass}`;
-    }
-
-    // ✅ NAME
-    if (newConfig.name) {
-        btn.dataset.name = newConfig.name;
-        btn.title = newConfig.name;
-    }
-
-    // ✅ ENTITY SYNC (same as toggle)
-    if (newConfig.entityId && newConfig.entityId !== oldEntityId) {
-
-        if (oldEntityId && window.EntityButtons?.[oldEntityId]) {
-            window.EntityButtons[oldEntityId] =
-                window.EntityButtons[oldEntityId].filter(b => b.id !== buttonId);
-        }
-
-        if (!window.EntityButtons) window.EntityButtons = {};
-        if (!window.EntityButtons[newConfig.entityId]) {
-            window.EntityButtons[newConfig.entityId] = [];
-        }
-
-        const entityButton = {
-            id: buttonId,
-            entityId: newConfig.entityId,
-            isOn: false,
-            updateUI() {
-                const el = document.getElementById(this.id);
-                if (!el) return;
-                el.classList.toggle('on', this.isOn);
-            },
-            handleStateUpdate(state) {
-                this.isOn = state === 'on';
-                this.updateUI();
+        // ICON UPDATE
+        if (newConfig.iconClass) {
+            // Clear and set new icon
+            if (window.SVGIcons) {
+                window.SVGIcons.clearButtonIcons(btn);
+                window.SVGIcons.setIconImmediately(btn, newConfig.iconClass);
             }
-        };
+            btn.dataset.icon = newConfig.iconClass;
+        }
 
-        window.EntityButtons[newConfig.entityId].push(entityButton);
-        btn.dataset.entityId = newConfig.entityId;
+        // NAME UPDATE
+        if (newConfig.name) {
+            btn.dataset.name = newConfig.name;
+            btn.title = newConfig.name;
+        }
+
+        // ENTITY SYNC
+        if (newConfig.entityId && newConfig.entityId !== oldEntityId) {
+            if (oldEntityId && window.EntityButtons?.[oldEntityId]) {
+                window.EntityButtons[oldEntityId] =
+                    window.EntityButtons[oldEntityId].filter(b => b.id !== buttonId);
+            }
+
+            if (!window.EntityButtons) window.EntityButtons = {};
+            if (!window.EntityButtons[newConfig.entityId]) {
+                window.EntityButtons[newConfig.entityId] = [];
+            }
+
+            const entityButton = {
+                id: buttonId,
+                entityId: newConfig.entityId,
+                isOn: false,
+                updateUI() {
+                    const el = document.getElementById(this.id);
+                    if (!el) return;
+                    el.classList.toggle('on', this.isOn);
+                    if (window.SVGIcons && window.SVGIcons.updateIconColor) {
+                        window.SVGIcons.updateIconColor(el);
+                    }
+                },
+                handleStateUpdate(state) {
+                    this.isOn = state === 'on';
+                    this.updateUI();
+                }
+            };
+
+            window.EntityButtons[newConfig.entityId].push(entityButton);
+            btn.dataset.entityId = newConfig.entityId;
+        }
+
+        saveToLocalStorage();
+        return true;
     }
-
-    saveToLocalStorage();
-    return true;
-}
-
 
     // Delete button
     function deleteButton(buttonId) {

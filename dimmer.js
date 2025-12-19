@@ -1,4 +1,4 @@
-// dimmer.js - Complete dimmer module with fixed long-press
+// dimmer.js - Complete dimmer module with fixed icon handling
 window.DimmerModule = (function () {
     'use strict';
 
@@ -141,18 +141,16 @@ window.DimmerModule = (function () {
 
     // Save to localStorage
     function saveToLocalStorage() {
-        // Clean dimmer data before saving
         const cleanDimmers = dimmerButtons.map(dimmer => ({
             id: dimmer.id,
             type: 'dimmer',
             entityId: dimmer.entityId || '',
             name: dimmer.name || 'Dimmer',
-            iconClass: dimmer.iconClass || 'fa-sliders-h',
+            iconClass: dimmer.iconClass || 'dimmer.svg',
             position: {
                 x: Number(dimmer.position.x.toFixed(4)),
                 y: Number(dimmer.position.y.toFixed(4))
             }
-            // DO NOT include: brightness, isOn, callbacks, etc.
         }));
 
         localStorage.setItem('dimmerButtons', JSON.stringify(cleanDimmers));
@@ -166,7 +164,7 @@ window.DimmerModule = (function () {
 
         // Set defaults
         config.type = 'dimmer';
-        config.iconClass = config.iconClass || 'fa-sliders-h';
+        config.iconClass = config.iconClass || 'dimmer.svg';
         config.name = config.name || 'Dimmer';
         config.brightness = config.brightness || 50;
         config.isOn = config.isOn || false;
@@ -184,7 +182,6 @@ window.DimmerModule = (function () {
         return config.id;
     }
 
-    // Create dimmer button DOM element
     function createDimmerButton(config) {
         // Remove existing if present
         const existing = document.getElementById(config.id);
@@ -196,9 +193,15 @@ window.DimmerModule = (function () {
         button.dataset.entityId = config.entityId;
         button.dataset.brightness = config.brightness;
         button.dataset.type = 'dimmer';
+        button.dataset.icon = config.iconClass || 'dimmer.svg';
 
-        // Simple button with just icon
-        button.innerHTML = `<i class="icon fas ${config.iconClass}"></i>`;
+        // Create icon container
+        button.innerHTML = `<div class="icon"></div>`;
+
+        // Set SVG icon
+        if (window.SVGIcons) {
+            window.SVGIcons.setIconImmediately(button, config.iconClass || 'dimmer.svg');
+        }
 
         // Set initial state
         if (config.isOn && config.brightness > 0) {
@@ -207,6 +210,11 @@ window.DimmerModule = (function () {
         } else {
             button.classList.remove('on');
             button.classList.add('off');
+        }
+
+        // Update icon color based on state
+        if (window.SVGIcons && window.SVGIcons.updateIconColor) {
+            window.SVGIcons.updateIconColor(button);
         }
 
         // Add event listeners
@@ -241,7 +249,6 @@ window.DimmerModule = (function () {
         // Mouse down handler
         button.addEventListener('mousedown', (e) => {
             if (!isEditMode) {
-                // In normal mode, just prevent default
                 e.stopPropagation();
                 e.preventDefault();
                 return;
@@ -458,58 +465,44 @@ window.DimmerModule = (function () {
     // Stop dragging
     function stopDrag() {
         isDragging = false;
+    }
 
-        // Clear selection when drag ends
-        if (currentRGB) {
-            const btn = document.getElementById(currentRGB.id);
-            if (btn) btn.classList.remove('selected');
+    // Show edit modal for dimmer
+    function showEditModal(config) {
+        console.log('Dimmer: Opening edit modal for:', config.id, 'type: dimmer');
+        
+        // Mark button as selected
+        if (window.selectButtonForEdit) {
+            window.selectButtonForEdit(config.id, 'dimmer');
         }
-
-        // Reset all RGB buttons cursor
-        rgbButtons.forEach(config => {
-            const btn = document.getElementById(config.id);
-            if (btn) {
-                btn.classList.remove('dragging');
-                btn.style.cursor = 'grab';
-            }
-        });
+        
+        // Fill the edit form
+        const editEntityId = document.getElementById('editEntityId');
+        const editName = document.getElementById('editName');
+        const editIcon = document.getElementById('editIcon');
+        
+        if (editEntityId) editEntityId.value = config.entityId || '';
+        if (editName) editName.value = config.name || 'Dimmer';
+        if (editIcon) editIcon.value = config.iconClass || 'dimmer.svg';
+        
+        // Store which button we're editing
+        window.currentEditingButton = config.id;
+        window.currentEditingType = 'dimmer';
+        
+        // Also set in buttons module
+        if (window.buttons && window.buttons.setEditingButtonId) {
+            window.buttons.setEditingButtonId(config.id);
+        }
+        
+        // Show modal
+        const modal = document.getElementById('buttonEditModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            console.log('Dimmer: Modal displayed');
+        } else {
+            console.error('Dimmer: Edit modal not found');
+        }
     }
-// Show edit modal for dimmer
-function showEditModal(config) {
-    console.log('Dimmer: Opening edit modal for:', config.id, 'type: dimmer');
-    
-    // Mark button as selected
-    if (window.selectButtonForEdit) {
-        window.selectButtonForEdit(config.id, 'dimmer');
-    }
-    
-    // Fill the edit form
-    const editEntityId = document.getElementById('editEntityId');
-    const editName = document.getElementById('editName');
-    const editIcon = document.getElementById('editIcon');
-    
-    if (editEntityId) editEntityId.value = config.entityId || '';
-    if (editName) editName.value = config.name || 'Dimmer';
-    if (editIcon) editIcon.value = config.iconClass || 'fa-sliders-h';
-    
-    // Store which button we're editing
-    window.currentEditingButton = config.id;
-    window.currentEditingType = 'dimmer';
-    
-    // Also set in buttons module
-    if (window.buttons && window.buttons.setEditingButtonId) {
-        window.buttons.setEditingButtonId(config.id);
-    }
-    
-    // Show modal
-    const modal = document.getElementById('buttonEditModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        console.log('Dimmer: Modal displayed');
-    } else {
-        console.error('Dimmer: Edit modal not found');
-    }
-}
 
     // Update dimmer button UI
     function updateDimmerUI(button, brightness, isOn) {
@@ -523,6 +516,11 @@ function showEditModal(config) {
         } else {
             button.classList.remove('on');
             button.classList.add('off');
+        }
+
+        // Update icon color
+        if (window.SVGIcons && window.SVGIcons.updateIconColor) {
+            window.SVGIcons.updateIconColor(button);
         }
     }
 
@@ -631,8 +629,6 @@ function showEditModal(config) {
     }
 
     // Toggle edit mode
-    // In dimmer.js, update the enableEditMode function:
-
     function enableEditMode(flag) {
         isEditMode = flag;
 
@@ -676,70 +672,75 @@ function showEditModal(config) {
         return dimmerButtons;
     }
 
-// Update button config
-function updateConfig(buttonId, newConfig) {
-    const index = dimmerButtons.findIndex(b => b.id === buttonId);
-    if (index === -1) return false;
+    // Update button config
+    function updateConfig(buttonId, newConfig) {
+        const index = dimmerButtons.findIndex(b => b.id === buttonId);
+        if (index === -1) return false;
 
-    const btnData = dimmerButtons[index];
-    const oldEntityId = btnData.entityId;
+        const btnData = dimmerButtons[index];
+        const oldEntityId = btnData.entityId;
 
-    // ✅ UPDATE STORED DATA (CRITICAL)
-    Object.assign(btnData, newConfig);
+        // UPDATE STORED DATA
+        Object.assign(btnData, newConfig);
 
-    const btn = document.getElementById(buttonId);
-    if (!btn) return false;
+        const btn = document.getElementById(buttonId);
+        if (!btn) return false;
 
-    /* ---------- ICON ---------- */
-    if (newConfig.iconClass) {
-        const icon = btn.querySelector('.icon');
-        icon.className = `icon fas ${newConfig.iconClass}`;
-    }
-
-    /* ---------- NAME ---------- */
-    if (newConfig.name) {
-        btn.dataset.name = newConfig.name;
-        btn.title = newConfig.name;
-    }
-
-    /* ---------- ENTITY SYNC ---------- */
-    if (newConfig.entityId && newConfig.entityId !== oldEntityId) {
-
-        // remove from old entity
-        if (oldEntityId && window.EntityButtons?.[oldEntityId]) {
-            window.EntityButtons[oldEntityId] =
-                window.EntityButtons[oldEntityId].filter(b => b.id !== buttonId);
-        }
-
-        // add to new entity
-        if (!window.EntityButtons) window.EntityButtons = {};
-        if (!window.EntityButtons[newConfig.entityId]) {
-            window.EntityButtons[newConfig.entityId] = [];
-        }
-
-        const entityButton = {
-            id: buttonId,
-            entityId: newConfig.entityId,
-            isOn: false,
-            updateUI() {
-                const el = document.getElementById(this.id);
-                if (!el) return;
-                el.classList.toggle('on', this.isOn);
-            },
-            handleStateUpdate(state) {
-                this.isOn = state === 'on';
-                this.updateUI();
+        // ICON UPDATE
+        if (newConfig.iconClass) {
+            // Clear and set new icon
+            if (window.SVGIcons) {
+                window.SVGIcons.clearButtonIcons(btn);
+                window.SVGIcons.setIconImmediately(btn, newConfig.iconClass);
             }
-        };
+            btn.dataset.icon = newConfig.iconClass;
+        }
 
-        window.EntityButtons[newConfig.entityId].push(entityButton);
-        btn.dataset.entityId = newConfig.entityId;
+        // NAME UPDATE
+        if (newConfig.name) {
+            btn.dataset.name = newConfig.name;
+            btn.title = newConfig.name;
+        }
+
+        // ENTITY SYNC
+        if (newConfig.entityId && newConfig.entityId !== oldEntityId) {
+            // remove from old entity
+            if (oldEntityId && window.EntityButtons?.[oldEntityId]) {
+                window.EntityButtons[oldEntityId] =
+                    window.EntityButtons[oldEntityId].filter(b => b.id !== buttonId);
+            }
+
+            // add to new entity
+            if (!window.EntityButtons) window.EntityButtons = {};
+            if (!window.EntityButtons[newConfig.entityId]) {
+                window.EntityButtons[newConfig.entityId] = [];
+            }
+
+            const entityButton = {
+                id: buttonId,
+                entityId: newConfig.entityId,
+                isOn: false,
+                updateUI() {
+                    const el = document.getElementById(this.id);
+                    if (!el) return;
+                    el.classList.toggle('on', this.isOn);
+                    if (window.SVGIcons && window.SVGIcons.updateIconColor) {
+                        window.SVGIcons.updateIconColor(el);
+                    }
+                },
+                handleStateUpdate(state) {
+                    this.isOn = state === 'on';
+                    this.updateUI();
+                }
+            };
+
+            window.EntityButtons[newConfig.entityId].push(entityButton);
+            btn.dataset.entityId = newConfig.entityId;
+        }
+
+        saveToLocalStorage();
+        return true;
     }
-
-    saveToLocalStorage();
-    return true;
-}
-
 
     // Delete button
     function deleteButton(buttonId) {
@@ -758,7 +759,6 @@ function updateConfig(buttonId, newConfig) {
 
     // Handle state update from Home Assistant
     function handleStateUpdate(entityId, state, brightness) {
-        // brightness parameter is already in percentage from main.js
         const brightnessPercent = brightness || 0;
         const isOn = state === 'on';
 
