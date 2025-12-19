@@ -140,23 +140,23 @@ window.DimmerModule = (function () {
     }
 
     // Save to localStorage
-function saveToLocalStorage() {
-    // Clean dimmer data before saving
-    const cleanDimmers = dimmerButtons.map(dimmer => ({
-        id: dimmer.id,
-        type: 'dimmer',
-        entityId: dimmer.entityId || '',
-        name: dimmer.name || 'Dimmer',
-        iconClass: dimmer.iconClass || 'fa-sliders-h',
-        position: {
-            x: Number(dimmer.position.x.toFixed(4)),
-            y: Number(dimmer.position.y.toFixed(4))
-        }
-        // DO NOT include: brightness, isOn, callbacks, etc.
-    }));
-    
-    localStorage.setItem('dimmerButtons', JSON.stringify(cleanDimmers));
-}
+    function saveToLocalStorage() {
+        // Clean dimmer data before saving
+        const cleanDimmers = dimmerButtons.map(dimmer => ({
+            id: dimmer.id,
+            type: 'dimmer',
+            entityId: dimmer.entityId || '',
+            name: dimmer.name || 'Dimmer',
+            iconClass: dimmer.iconClass || 'fa-sliders-h',
+            position: {
+                x: Number(dimmer.position.x.toFixed(4)),
+                y: Number(dimmer.position.y.toFixed(4))
+            }
+            // DO NOT include: brightness, isOn, callbacks, etc.
+        }));
+
+        localStorage.setItem('dimmerButtons', JSON.stringify(cleanDimmers));
+    }
 
     // Create a dimmer button
     function create(config) {
@@ -237,7 +237,7 @@ function saveToLocalStorage() {
         let startY = 0;
         let startLeft = 0;
         let startTop = 0;
-        
+
         // Mouse down handler
         button.addEventListener('mousedown', (e) => {
             if (!isEditMode) {
@@ -270,11 +270,11 @@ function saveToLocalStorage() {
                 // Check if we haven't moved much
                 const movedX = Math.abs(e.clientX - startX);
                 const movedY = Math.abs(e.clientY - startY);
-                
+
                 if (movedX < dragThreshold && movedY < dragThreshold && !isDragging) {
                     showEditModal(config);
                 }
-                
+
                 longPressTimer = null;
             }, 600);
 
@@ -282,13 +282,13 @@ function saveToLocalStorage() {
             const mouseMoveHandler = (moveEvent) => {
                 const moveX = Math.abs(moveEvent.clientX - startX);
                 const moveY = Math.abs(moveEvent.clientY - startY);
-                
+
                 // If movement exceeds threshold, start dragging
                 if ((moveX > dragThreshold || moveY > dragThreshold) && longPressTimer) {
                     clearTimeout(longPressTimer);
                     longPressTimer = null;
                     startDrag(moveEvent, button, config);
-                    
+
                     // Remove this listener
                     document.removeEventListener('mousemove', mouseMoveHandler);
                 }
@@ -348,7 +348,7 @@ function saveToLocalStorage() {
             const touch = e.touches[0];
             const moveX = Math.abs(touch.clientX - startX);
             const moveY = Math.abs(touch.clientY - startY);
-            
+
             // If movement exceeds threshold, start dragging
             if (moveX > dragThreshold || moveY > dragThreshold) {
                 if (longPressTimer) {
@@ -357,7 +357,7 @@ function saveToLocalStorage() {
                 }
                 startDrag(e, button, config);
             }
-            
+
             e.preventDefault();
         });
 
@@ -369,7 +369,7 @@ function saveToLocalStorage() {
                     showEditModal(config);
                     longPressTimer = null;
                 }
-                
+
                 if (isDragging) {
                     stopDrag();
                 }
@@ -391,7 +391,7 @@ function saveToLocalStorage() {
 
         const startDragX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
         const startDragY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-        
+
         const originalLeft = parseFloat(button.style.left);
         const originalTop = parseFloat(button.style.top);
 
@@ -458,9 +458,15 @@ function saveToLocalStorage() {
     // Stop dragging
     function stopDrag() {
         isDragging = false;
-        
-        // Reset all dimmer buttons cursor
-        dimmerButtons.forEach(config => {
+
+        // Clear selection when drag ends
+        if (currentRGB) {
+            const btn = document.getElementById(currentRGB.id);
+            if (btn) btn.classList.remove('selected');
+        }
+
+        // Reset all RGB buttons cursor
+        rgbButtons.forEach(config => {
             const btn = document.getElementById(config.id);
             if (btn) {
                 btn.classList.remove('dragging');
@@ -468,18 +474,20 @@ function saveToLocalStorage() {
             }
         });
     }
-
+    // Show edit modal for dimmer
     // Show edit modal for dimmer
     function showEditModal(config) {
+        // Mark button as selected
+        selectButtonForEdit(config.id, 'dimmer');
+
         // Fill the edit form
         document.getElementById('editEntityId').value = config.entityId || '';
         document.getElementById('editName').value = config.name || '';
         document.getElementById('editIcon').value = config.iconClass || 'fa-sliders-h';
 
         // Store which button we're editing
-        if (window.buttons) {
-            window.buttons.editingButtonId = config.id;
-        }
+        window.currentEditingButton = config.id;
+        window.currentEditingType = 'dimmer';
 
         // Show modal
         document.getElementById('buttonEditModal').style.display = 'flex';
@@ -605,28 +613,28 @@ function saveToLocalStorage() {
     }
 
     // Toggle edit mode
-// In dimmer.js, update the enableEditMode function:
+    // In dimmer.js, update the enableEditMode function:
 
-function enableEditMode(flag) {
-    isEditMode = flag;
+    function enableEditMode(flag) {
+        isEditMode = flag;
 
-    dimmerButtons.forEach(config => {
-        const btn = document.getElementById(config.id);
-        if (btn) {
-            if (flag) {
-                btn.classList.add('edit-mode');
-                btn.style.cursor = 'grab';
-            } else {
-                btn.classList.remove('edit-mode');
-                btn.style.cursor = '';
+        dimmerButtons.forEach(config => {
+            const btn = document.getElementById(config.id);
+            if (btn) {
+                if (flag) {
+                    btn.classList.add('edit-mode');
+                    btn.style.cursor = 'grab';
+                } else {
+                    btn.classList.remove('edit-mode');
+                    btn.style.cursor = '';
+                }
             }
-        }
-    });
+        });
 
-    if (!flag) {
-        saveToLocalStorage();
+        if (!flag) {
+            saveToLocalStorage();
+        }
     }
-}
 
     // Update positions (called when image zooms/pans)
     function updatePositions() {

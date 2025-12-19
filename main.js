@@ -1,8 +1,60 @@
+// Global selection handler - must be available BEFORE modules load
+window.selectButtonForEdit = function(buttonId, type) {
+    console.log('Selecting button:', buttonId, 'type:', type);
+    
+    // Clear previous selection
+    document.querySelectorAll('.light-button.selected')
+        .forEach(b => {
+            b.classList.remove('selected');
+            console.log('Removed selection from:', b.id);
+        });
+    
+    const btn = document.getElementById(buttonId);
+    if (!btn) {
+        console.error('Button not found:', buttonId);
+        return;
+    }
+    
+    btn.classList.add('selected');
+    console.log('Added selection to:', buttonId);
+    
+    window.currentEditingButton = buttonId;
+    window.currentEditingType = type;
+    
+    // Store in both window.buttons and global for backup
+    if (window.buttons) {
+        window.buttons.setEditingButtonId(buttonId);
+    }
+};
+
+// Initialize global variables
+window.currentEditingButton = null;
+window.currentEditingType = null;
+// Global selection state
+window.currentEditingButton = null;
+window.currentEditingType = null;
+
+// Function to select a button for editing
+function selectButtonForEdit(buttonId, type) {
+    // Clear previous selection
+    document.querySelectorAll('.light-button.selected')
+        .forEach(b => b.classList.remove('selected'));
+
+    const btn = document.getElementById(buttonId);
+    if (!btn) return;
+
+    btn.classList.add('selected');
+
+    window.currentEditingButton = buttonId;
+    window.currentEditingType = type;
+}
 // main.js - Updated with CCT and RGB support
 document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener('gesturestart', e => e.preventDefault());
     document.addEventListener('gesturechange', e => e.preventDefault());
     document.addEventListener('gestureend', e => e.preventDefault());
+    // Delete button event listener
+    document.getElementById('deleteBtn').addEventListener('click', handleDeleteButton);
 
     const container = document.getElementById("container");
     const pan = document.getElementById("panLayer");
@@ -281,7 +333,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (domain === 'light') {
             const haBrightness = Math.round((brightness / 100) * 255);
-            
+
             // Convert percentage to mireds (153-500 range)
             // 0% = 6500K (153 mireds), 100% = 2000K (500 mireds)
             const minMireds = 153;
@@ -330,7 +382,49 @@ document.addEventListener("DOMContentLoaded", () => {
             updateFooter(`RGB updated to ${brightness}% brightness, hue: ${hue}°`);
         }
     }
+    // Handle delete button click
+    function handleDeleteButton() {
+        const id = window.currentEditingButton;
+        const type = window.currentEditingType;
 
+        if (!id || !type) {
+            alert('No button selected for deletion.');
+            return;
+        }
+
+        if (!confirm('Are you sure you want to delete this button?')) {
+            return;
+        }
+
+        let deleted = false;
+
+        // Route delete to appropriate module
+        if (type === 'dimmer' && window.DimmerModule && DimmerModule.deleteButton) {
+            deleted = DimmerModule.deleteButton(id);
+        } else if (type === 'cct' && window.CCTModule && CCTModule.deleteButton) {
+            deleted = CCTModule.deleteButton(id);
+        } else if (type === 'rgb' && window.RGBModule && RGBModule.deleteButton) {
+            deleted = RGBModule.deleteButton(id);
+        } else if (window.buttons && window.buttons.deleteButton) {
+            deleted = window.buttons.deleteButton(id);
+        }
+
+        if (deleted) {
+            // Clear selection
+            const btn = document.getElementById(id);
+            if (btn) btn.classList.remove('selected');
+
+            window.currentEditingButton = null;
+            window.currentEditingType = null;
+
+            // Close modal
+            document.getElementById('buttonEditModal').style.display = 'none';
+
+            updateFooter('Button deleted');
+        } else {
+            alert('Failed to delete button.');
+        }
+    }
     function saveDesign() {
         console.log('Saving design...');
 
@@ -731,7 +825,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return true;
         });
     }
-    
+
     function clearAll() {
         if (!confirm("Are you sure you want to clear all buttons and reset the design? This action cannot be undone.")) {
             return;
@@ -1178,7 +1272,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
     }
-    
+
     document.getElementById("buttonEditForm").addEventListener("submit", function (e) {
         e.preventDefault();
 
@@ -1200,7 +1294,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Determine which module to update based on button type
         const buttonType = getButtonType(btnId);
-        
+
         if (buttonType === 'dimmer' && window.DimmerModule) {
             DimmerModule.updateConfig(btnId, {
                 entityId: entityId,
@@ -1232,23 +1326,35 @@ document.addEventListener("DOMContentLoaded", () => {
         buttons.setEditingButtonId(null);
     });
 
-    document.getElementById('closeEditBtn')?.addEventListener('click', () => {
-        document.getElementById('buttonEditModal').style.display = 'none';
-        if (window.buttons) {
-            window.buttons.setEditingButtonId(null);
+document.getElementById('closeEditBtn')?.addEventListener('click', () => {
+    document.getElementById('buttonEditModal').style.display = 'none';
+    
+    // Clear selection when modal closes
+    if (window.currentEditingButton) {
+        const btn = document.getElementById(window.currentEditingButton);
+        if (btn) btn.classList.remove('selected');
+    }
+    
+    window.currentEditingButton = null;
+    window.currentEditingType = null;
+});
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.style.display = 'none';
+            
+            // Clear selection when modal closes
+            if (window.currentEditingButton) {
+                const btn = document.getElementById(window.currentEditingButton);
+                if (btn) btn.classList.remove('selected');
+            }
+            
+            window.currentEditingButton = null;
+            window.currentEditingType = null;
         }
     });
-
-    document.querySelectorAll('.modal-overlay').forEach(overlay => {
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                overlay.style.display = 'none';
-                if (window.buttons) {
-                    window.buttons.setEditingButtonId(null);
-                }
-            }
-        });
-    });
+});
 
     function connectWebSocket() {
         ws = new WebSocket(WS_URL);
@@ -1612,7 +1718,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function getButtonType(buttonId) {
         const btn = document.getElementById(buttonId);
         if (!btn) return 'toggle';
-        
+
         if (btn.classList.contains('dimmer')) return 'dimmer';
         if (btn.classList.contains('cct')) return 'cct';
         if (btn.classList.contains('rgb')) return 'rgb';
@@ -1691,7 +1797,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }, { passive: false });
     }
-    
+
     function init() {
         // Load slider values FIRST
         loadSliderValues();
@@ -1772,18 +1878,19 @@ function getDistance(t1, t2) {
 }
 
 document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
-        e.preventDefault();
-        if (window.resetViewHard) {
-            window.resetViewHard();
-            updateFooter('Reset (Ctrl+R)');
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.style.display = 'none';
+        });
+        
+        // Clear selection when modal closes
+        if (window.currentEditingButton) {
+            const btn = document.getElementById(window.currentEditingButton);
+            if (btn) btn.classList.remove('selected');
         }
-    }
-    if (e.key === 'Escape' && !isEditMode) {
-        if (window.resetViewHard) {
-            window.resetViewHard();
-            updateFooter('Reset (ESC)');
-        }
+        
+        window.currentEditingButton = null;
+        window.currentEditingType = null;
     }
 });
 

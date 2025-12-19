@@ -728,3 +728,10 @@ body {
         var(--dimmer-content-opacity)
     ) !important;
 }
+
+/* Add to the end of style.css */
+.light-button.selected {
+    outline: 3px solid #ff5722 !important;
+    outline-offset: 2px !important;
+    z-index: 1000 !important;
+}

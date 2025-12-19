@@ -682,35 +682,44 @@ window.CCTModule = (function () {
         document.addEventListener('touchend', dragEndHandler);
     }
 
-    // Stop dragging
-    function stopDrag() {
-        isDragging = false;
-        
-        // Reset all CCT buttons cursor
-        cctButtons.forEach(config => {
-            const btn = document.getElementById(config.id);
-            if (btn) {
-                btn.classList.remove('dragging');
-                btn.style.cursor = 'grab';
-            }
-        });
+// Stop dragging
+function stopDrag() {
+    isDragging = false;
+    
+    // Clear selection when drag ends
+    if (currentCCT) {
+        const btn = document.getElementById(currentCCT.id);
+        if (btn) btn.classList.remove('selected');
     }
+    
+    // Reset all CCT buttons cursor
+    cctButtons.forEach(config => {
+        const btn = document.getElementById(config.id);
+        if (btn) {
+            btn.classList.remove('dragging');
+            btn.style.cursor = 'grab';
+        }
+    });
+}
 
     // Show edit modal for CCT
-    function showEditModal(config) {
-        // Fill the edit form
-        document.getElementById('editEntityId').value = config.entityId || '';
-        document.getElementById('editName').value = config.name || '';
-        document.getElementById('editIcon').value = config.iconClass || 'fa-lightbulb';
-
-        // Store which button we're editing
-        if (window.buttons) {
-            window.buttons.editingButtonId = config.id;
-        }
-
-        // Show modal
-        document.getElementById('buttonEditModal').style.display = 'flex';
-    }
+// Show edit modal for CCT
+function showEditModal(config) {
+    // Mark button as selected
+    selectButtonForEdit(config.id, 'cct');
+    
+    // Fill the edit form
+    document.getElementById('editEntityId').value = config.entityId || '';
+    document.getElementById('editName').value = config.name || '';
+    document.getElementById('editIcon').value = config.iconClass || 'fa-lightbulb';
+    
+    // Store which button we're editing
+    window.currentEditingButton = config.id;
+    window.currentEditingType = 'cct';
+    
+    // Show modal
+    document.getElementById('buttonEditModal').style.display = 'flex';
+}
 
     // Update CCT button UI
     function updateCCTUI(button, brightness, isOn) {

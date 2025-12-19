@@ -715,35 +715,42 @@ window.RGBModule = (function () {
         document.addEventListener('touchend', dragEndHandler);
     }
 
-    // Stop dragging
-    function stopDrag() {
-        isDragging = false;
-        
-        // Reset all RGB buttons cursor
-        rgbButtons.forEach(config => {
-            const btn = document.getElementById(config.id);
-            if (btn) {
-                btn.classList.remove('dragging');
-                btn.style.cursor = 'grab';
-            }
-        });
+// Stop dragging
+function stopDrag() {
+    isDragging = false;
+    
+    // Clear selection when drag ends
+    if (currentRGB) {
+        const btn = document.getElementById(currentRGB.id);
+        if (btn) btn.classList.remove('selected');
     }
-
-    // Show edit modal for RGB
-    function showEditModal(config) {
-        // Fill the edit form
-        document.getElementById('editEntityId').value = config.entityId || '';
-        document.getElementById('editName').value = config.name || '';
-        document.getElementById('editIcon').value = config.iconClass || 'fa-lightbulb';
-
-        // Store which button we're editing
-        if (window.buttons) {
-            window.buttons.editingButtonId = config.id;
+    
+    // Reset all RGB buttons cursor
+    rgbButtons.forEach(config => {
+        const btn = document.getElementById(config.id);
+        if (btn) {
+            btn.classList.remove('dragging');
+            btn.style.cursor = 'grab';
         }
-
-        // Show modal
-        document.getElementById('buttonEditModal').style.display = 'flex';
-    }
+    });
+}
+// Show edit modal for RGB
+function showEditModal(config) {
+    // Mark button as selected
+    selectButtonForEdit(config.id, 'rgb');
+    
+    // Fill the edit form
+    document.getElementById('editEntityId').value = config.entityId || '';
+    document.getElementById('editName').value = config.name || '';
+    document.getElementById('editIcon').value = config.iconClass || 'fa-lightbulb';
+    
+    // Store which button we're editing
+    window.currentEditingButton = config.id;
+    window.currentEditingType = 'rgb';
+    
+    // Show modal
+    document.getElementById('buttonEditModal').style.display = 'flex';
+}
 
     // Update RGB button UI
     function updateRGBUI(button, brightness, isOn) {
