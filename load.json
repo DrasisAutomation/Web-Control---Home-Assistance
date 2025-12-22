@@ -1,6 +1,6 @@
 {
   "meta": {
-    "savedAt": "2025-12-19T06:24:41.105Z",
+    "savedAt": "2025-12-20T11:35:29.547Z",
     "version": "2.0",
     "totalButtons": 8
   },
@@ -34,8 +34,8 @@
       "name": "Entrance Light",
       "iconClass": "door-opened.svg",
       "position": {
-        "x": 0.4481,
-        "y": 0.2272
+        "x": 0.2872,
+        "y": 0.4286
       }
     },
     {
@@ -56,8 +56,8 @@
       "name": "Light",
       "iconClass": "dimmer.svg",
       "position": {
-        "x": 0.2561,
-        "y": 0.9454
+        "x": 0.2494,
+        "y": 0.9539
       }
     },
     {
@@ -65,7 +65,7 @@
       "type": "dimmer",
       "entityId": "light.pantry_cct_lighr_exp_room_entrance_light",
       "name": "Dimmer",
-      "iconClass": "fa-sliders-h",
+      "iconClass": "ac-1.svg",
       "position": {
         "x": 0.1009,
         "y": 0.1486
@@ -76,10 +76,10 @@
       "type": "dimmer",
       "entityId": "light.round_fitting_light",
       "name": "Dimmer",
-      "iconClass": "fa-toggle-on",
+      "iconClass": "chandelier-3.svg",
       "position": {
-        "x": 0.1,
-        "y": 0.3942
+        "x": 0.3939,
+        "y": 0.2698
       }
     },
     {
@@ -87,7 +87,7 @@
       "type": "cct",
       "entityId": "light.rgbw_1",
       "name": "CCT Light",
-      "iconClass": "fa-lightbulb",
+      "iconClass": "ac-3.svg",
       "position": {
         "x": 0.3601,
         "y": 0.556
@@ -100,7 +100,7 @@
       "type": "rgb",
       "entityId": "light.rgbw_1",
       "name": "RGB Light",
-      "iconClass": "fa-lightbulb",
+      "iconClass": "table-light-2.svg",
       "position": {
         "x": 0.2231,
         "y": 0.3552

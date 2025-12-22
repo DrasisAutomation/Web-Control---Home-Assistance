@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Door Sensor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Center the button */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: transparent;
+        }
+
+        .sensor-button {
+            width: 40px;
+            height: 40px;
+            background-color: white;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 0;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+        }
+
+        .sensor-button:hover {
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .sensor-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .sensor-button.closed {
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+        }
+
+        .sensor-button.open {
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+        }
+
+        .sensor-button .icon {
+            font-size: 18px;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .sensor-button.closed .icon {
+            color: #33cc33;
+        }
+
+        .sensor-button.open .icon {
+            color: #ff3333;
+        }
+
+        /* Status indicator dot */
+        .status-dot {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .sensor-button.closed .status-dot {
+            background-color: #33cc33;
+            box-shadow: 0 0 5px #33cc33;
+        }
+
+        .sensor-button.open .status-dot {
+            background-color: #ff3333;
+            box-shadow: 0 0 5px #ff3333;
+        }
+    </style>
+</head>
+<body>
+    <button class="sensor-button" id="sensorBtn" disabled>
+        <i class="fas fa-door-closed icon" id="doorIcon"></i>
+        <div class="status-dot"></div>
+    </button>
+
+<script>
+// WebSocket configuration - UPDATE THESE VALUES
+const WS_URL = "wss://demo.lumihomepro1.com/api/websocket";
+const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzNGNlNThiNDk1Nzk0NDVmYjUxNzE2NDA0N2Q0MGNmZCIsImlhdCI6MTc2NTM0NzQ5MSwiZXhwIjoyMDgwNzA3NDkxfQ.Se5PGwx0U9aqyVRnD1uwvCv3F-aOE8H53CKA5TqsV7U";
+
+// UPDATE THIS TO YOUR DOOR SENSOR ENTITY ID
+// Examples: 
+// - binary_sensor.front_door_contact
+// - binary_sensor.back_door_contact
+// - binary_sensor.garage_door
+const DOOR_SENSOR_ENTITY = "binary_sensor.showroom_door_sensor_window_door_is_open";
+
+let ws, isDoorOpen = false, ready = false;
+const sensorBtn = document.getElementById('sensorBtn');
+const doorIcon = document.getElementById('doorIcon');
+
+// Make the button draggable
+function makeButtonDraggable(btn) {
+    let isDrag = false, startX, startY, origX, origY;
+
+    btn.addEventListener("mousedown", e => {
+        isDrag = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        origX = btn.offsetLeft;
+        origY = btn.offsetTop;
+        btn.style.cursor = "grabbing";
+        e.stopPropagation();
+    });
+
+    window.addEventListener("mousemove", e => {
+        if (!isDrag) return;
+        let dx = e.clientX - startX;
+        let dy = e.clientY - startY;
+        btn.style.left = (origX + dx) + "px";
+        btn.style.top = (origY + dy) + "px";
+    });
+
+    window.addEventListener("mouseup", () => {
+        isDrag = false;
+        btn.style.cursor = "pointer";
+    });
+}
+
+// Connect to WebSocket
+function connectWebSocket() {
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+        console.log("WebSocket connected");
+        ws.send(JSON.stringify({ type: "auth", access_token: TOKEN }));
+    };
+
+    ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        console.log("Message:", data.type);
+
+        if (data.type === "auth_ok") {
+            console.log("Authentication successful");
+            ready = true;
+            sensorBtn.disabled = false;
+
+            // Get initial state
+            setTimeout(() => {
+                ws.send(JSON.stringify({
+                    id: 1,
+                    type: "get_states"
+                }));
+
+                // Subscribe to changes
+                setTimeout(() => {
+                    ws.send(JSON.stringify({
+                        id: 2,
+                        type: "subscribe_events",
+                        event_type: "state_changed"
+                    }));
+                }, 100);
+            }, 100);
+        }
+        else if (data.type === "result" && data.id === 1) {
+            if (data.success && data.result) {
+                const sensor = data.result.find(e => e.entity_id === DOOR_SENSOR_ENTITY);
+                if (sensor) {
+                    // For binary_sensor, "on" usually means open/detected
+                    // Check common state patterns
+                    if (sensor.state === "on" || sensor.state === "open" || sensor.state === "detected") {
+                        isDoorOpen = true;
+                    } else if (sensor.state === "off" || sensor.state === "closed" || sensor.state === "clear") {
+                        isDoorOpen = false;
+                    } else {
+                        // Log unknown state for debugging
+                        console.log(`Unknown sensor state: ${sensor.state}`);
+                        isDoorOpen = sensor.state !== "off";
+                    }
+                    
+                    updateDoorUI();
+                    console.log(`Door sensor state: ${sensor.state} (isDoorOpen: ${isDoorOpen})`);
+                } else {
+                    console.error(`Door sensor entity ${DOOR_SENSOR_ENTITY} not found`);
+                    // Show error state
+                    sensorBtn.disabled = true;
+                    doorIcon.className = "fas fa-exclamation-triangle icon";
+                    sensorBtn.classList.remove('open', 'closed');
+                }
+            }
+        }
+        else if (data.type === "event" && data.event?.event_type === "state_changed") {
+            if (data.event.data.entity_id === DOOR_SENSOR_ENTITY) {
+                const newState = data.event.data.new_state.state;
+                
+                // Update based on new state
+                if (newState === "on" || newState === "open" || newState === "detected") {
+                    isDoorOpen = true;
+                } else if (newState === "off" || newState === "closed" || newState === "clear") {
+                    isDoorOpen = false;
+                } else {
+                    isDoorOpen = newState !== "off";
+                }
+                
+                updateDoorUI();
+                console.log(`Door sensor state changed to: ${newState}`);
+            }
+        }
+    };
+
+    ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        sensorBtn.disabled = true;
+        doorIcon.className = "fas fa-exclamation-triangle icon";
+        sensorBtn.classList.remove('open', 'closed');
+    };
+
+    ws.onclose = () => {
+        console.log("WebSocket disconnected");
+        sensorBtn.disabled = true;
+        ready = false;
+        
+        // Show disconnected state
+        doorIcon.className = "fas fa-plug icon";
+        sensorBtn.classList.remove('open', 'closed');
+        
+        setTimeout(connectWebSocket, 3000);
+    };
+}
+
+// Update door UI based on state
+function updateDoorUI() {
+    if (isDoorOpen) {
+        // Door is OPEN - Red theme
+        sensorBtn.classList.remove('closed');
+        sensorBtn.classList.add('open');
+        doorIcon.classList.remove('fa-door-closed');
+        doorIcon.classList.add('fa-door-open');
+    } else {
+        // Door is CLOSED - Green theme
+        sensorBtn.classList.remove('open');
+        sensorBtn.classList.add('closed');
+        doorIcon.classList.remove('fa-door-open');
+        doorIcon.classList.add('fa-door-closed');
+    }
+}
+
+// Optional: Add click handler if you want to refresh or show details
+sensorBtn.addEventListener('click', () => {
+    console.log(`Door sensor clicked. Current state: ${isDoorOpen ? 'OPEN' : 'CLOSED'}`);
+    
+    // Optional: Force refresh state
+    if (ready && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            id: Date.now(),
+            type: "get_states"
+        }));
+        console.log("Refreshing sensor state...");
+    }
+});
+
+// Initialize
+makeButtonDraggable(sensorBtn);
+connectWebSocket();
+</script>
+</body>
+</html>
