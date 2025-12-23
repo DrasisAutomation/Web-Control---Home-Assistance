@@ -93,8 +93,12 @@ document.addEventListener("DOMContentLoaded", () => {
     let dragStart = { x: 0, y: 0 };
     let panStart = { x: 0, y: 0 };
 
-    const WS_URL = "wss://demo.lumihomepro1.com/api/websocket";
-    const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzNGNlNThiNDk1Nzk0NDVmYjUxNzE2NDA0N2Q0MGNmZCIsImlhdCI6MTc2NTM0NzQ5MSwiZXhwIjoyMDgwNzA3NDkxfQ.Se5PGwx0U9aqyVRnD1uwvCv3F-aOE8H53CKA5TqsV7U";
+    // const WS_URL = "wss://demo.lumihomepro1.com/api/websocket";
+    // const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzNGNlNThiNDk1Nzk0NDVmYjUxNzE2NDA0N2Q0MGNmZCIsImlhdCI6MTc2NTM0NzQ5MSwiZXhwIjoyMDgwNzA3NDkxfQ.Se5PGwx0U9aqyVRnD1uwvCv3F-aOE8H53CKA5TqsV7U";
+
+    const WS_URL = "ws://192.168.2.204:8123/api/websocket";
+
+    const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzY2FhY2ZlMzA3YTc0MGZjODdmZGU5MDBhNTZkOTdjOCIsImlhdCI6MTc2NjQ3MzA4OCwiZXhwIjoyMDgxODMzMDg4fQ.xX2oNK1vd-a76axwTJeeIhFyeu53lhMBUwf9qmgHe4E";
 
     let ws, ready = false;
 
@@ -454,7 +458,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const dimmerButtons = window.DimmerModule ? DimmerModule.getDimmerButtons() : [];
         const cctButtons = window.CCTModule ? CCTModule.getCCTButtons() : [];
         const rgbButtons = window.RGBModule ? RGBModule.getRGBButtons() : [];
-
+        const lockButtons = window.LockModule ? LockModule.getLockButtons() : [];
+        const curtainButtons = window.CurtainModule ? CurtainModule.getCurtainButtons() : [];
         // Create unified buttons array
         const unifiedButtons = [];
 
@@ -530,6 +535,47 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
+        // Add lock buttons to unifiedButtons
+        lockButtons.forEach(lock => {
+            if (lock && lock.id) {
+                unifiedButtons.push({
+                    id: lock.id,
+                    type: 'lock',
+                    entityId: lock.entityId || '',
+                    name: lock.name || 'Lock',
+                    iconClass: lock.iconClass || 'lock.svg',
+                    position: {
+                        x: lock.position ? Number(lock.position.x.toFixed(4)) : 0.5,
+                        y: lock.position ? Number(lock.position.y.toFixed(4)) : 0.5
+                    },
+                    isLocked: lock.isLocked || true
+                });
+            }
+        });
+
+        // Add curtain buttons to unifiedButtons
+        curtainButtons.forEach(curtain => {
+            if (curtain && curtain.id) {
+                unifiedButtons.push({
+                    id: curtain.id,
+                    type: 'curtain',
+                    entityId: curtain.entityId || '',
+                    name: curtain.name || 'Curtain',
+                    iconClass: curtain.iconClass || 'curtain1.svg',
+                    position: {
+                        x: curtain.position ? Number(curtain.position.x.toFixed(4)) : 0.5,
+                        y: curtain.position ? Number(curtain.position.y.toFixed(4)) : 0.5
+                    },
+                    currentPosition:
+                        typeof curtain.currentPosition === 'number'
+                            ? curtain.currentPosition
+                            : 0,
+
+                    isOpen: curtain.isOpen || false
+                });
+            }
+        });
+
         // Get image metadata
         const imageMeta = getImageMetadata();
 
@@ -584,12 +630,41 @@ document.addEventListener("DOMContentLoaded", () => {
         reader.onload = function (e) {
             try {
                 const designData = JSON.parse(e.target.result);
-                applyDesign(designData);
 
+                // ENHANCED: Store the loaded design in localStorage with timestamp
                 try {
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(designData));
+                    const enhancedDesignData = {
+                        ...designData,
+                        meta: {
+                            ...designData.meta,
+                            loadedAt: new Date().toISOString(),
+                            source: 'file_import'
+                        }
+                    };
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(enhancedDesignData));
+                    console.log('Loaded design stored in localStorage with timestamp');
                 } catch (error) {
+                    console.warn('Could not store loaded design in localStorage:', error);
                 }
+
+                // ALSO store slider settings if they exist in the design
+                if (designData.settings) {
+                    try {
+                        const sliderValues = {
+                            buttonSize: designData.settings.buttonSize || 1,
+                            buttonOpacity: designData.settings.buttonOpacity || 0.8,
+                            modalOpacity: designData.settings.modalOpacity || 0.6,
+                            lastLoaded: new Date().toISOString(),
+                            source: 'from_loaded_design'
+                        };
+                        localStorage.setItem('sliderValues', JSON.stringify(sliderValues));
+                        console.log('Loaded slider settings stored in localStorage');
+                    } catch (error) {
+                        console.warn('Could not store slider settings:', error);
+                    }
+                }
+
+                applyDesign(designData);
 
             } catch (error) {
                 alert("Error loading design file. Please check the file format.");
@@ -613,13 +688,41 @@ document.addEventListener("DOMContentLoaded", () => {
                 designData.buttons = removeDuplicateButtons(designData.buttons);
             }
 
-            applyDesign(designData);
-
+            // ENHANCED: Store the loaded design in localStorage with timestamp
             try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(designData));
+                const enhancedDesignData = {
+                    ...designData,
+                    meta: {
+                        ...designData.meta,
+                        loadedAt: new Date().toISOString(),
+                        source: 'url_import',
+                        url: url
+                    }
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(enhancedDesignData));
+                console.log('Loaded design from URL stored in localStorage');
             } catch (error) {
-                console.warn('Could not save to localStorage:', error);
+                console.warn('Could not store loaded design in localStorage:', error);
             }
+
+            // ALSO store slider settings if they exist in the design
+            if (designData.settings) {
+                try {
+                    const sliderValues = {
+                        buttonSize: designData.settings.buttonSize || 1,
+                        buttonOpacity: designData.settings.buttonOpacity || 0.8,
+                        modalOpacity: designData.settings.modalOpacity || 0.6,
+                        lastLoaded: new Date().toISOString(),
+                        source: 'from_loaded_design_url'
+                    };
+                    localStorage.setItem('sliderValues', JSON.stringify(sliderValues));
+                    console.log('Loaded slider settings stored in localStorage');
+                } catch (error) {
+                    console.warn('Could not store slider settings:', error);
+                }
+            }
+
+            applyDesign(designData);
 
         } catch (error) {
             if (url !== DEFAULT_LOAD_FILE) {
@@ -710,7 +813,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 const sliderValues = {
                     buttonSize: designData.settings.buttonSize || 1,
                     buttonOpacity: designData.settings.buttonOpacity || 0.8,
-                    modalOpacity: designData.settings.modalOpacity || 0.6
+                    modalOpacity: designData.settings.modalOpacity || 0.6,
+                    lastApplied: new Date().toISOString()
                 };
                 localStorage.setItem('sliderValues', JSON.stringify(sliderValues));
             }
@@ -758,7 +862,26 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (window.RGBModule && RGBModule.create) {
                             RGBModule.create(cleanConfig);
                         }
-                    } else {
+                    } else if (cleanConfig.type === 'lock') {
+                        if (window.LockModule && LockModule.create) {
+                            LockModule.create(cleanConfig);
+                        }
+                    } else if (cleanConfig.type === 'curtain') {
+                        if (window.CurtainModule && CurtainModule.create) {
+                            CurtainModule.create({
+                                ...cleanConfig,
+                                currentPosition:
+                                    typeof buttonConfig.currentPosition === 'number'
+                                        ? buttonConfig.currentPosition
+                                        : 0,
+                                isOpen:
+                                    typeof buttonConfig.currentPosition === 'number'
+                                        ? buttonConfig.currentPosition > 0
+                                        : false
+                            });
+                        }
+                    }
+                    else {
                         buttons.create(cleanConfig);
                     }
                 });
@@ -781,7 +904,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }));
             }
 
-            updateFooter("Design loaded");
+            updateFooter("Design loaded and stored locally");
         }
 
         // Handle image loading
@@ -1161,6 +1284,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (window.RGBModule && RGBModule.enableEditMode) {
                     RGBModule.enableEditMode(true);
                 }
+                // ADD THESE TWO LINES:
+                if (window.LockModule && LockModule.enableEditMode) {
+                    LockModule.enableEditMode(true);
+                }
+                if (window.CurtainModule && CurtainModule.enableEditMode) {
+                    CurtainModule.enableEditMode(true);
+                }
             } else {
                 editBtn.textContent = '✎ Edit';
                 editBtn.classList.remove('edit-mode');
@@ -1179,6 +1309,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 if (window.RGBModule && RGBModule.enableEditMode) {
                     RGBModule.enableEditMode(false);
+                }
+                // ADD THESE TWO LINES:
+                if (window.LockModule && LockModule.enableEditMode) {
+                    LockModule.enableEditMode(false);
+                }
+                if (window.CurtainModule && CurtainModule.enableEditMode) {
+                    CurtainModule.enableEditMode(false);
                 }
             }
         });
@@ -1331,6 +1468,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 iconClass: icon
             });
             console.log('RGB update result:', success);
+            // In the form submission handler, add lock and curtain support:
+        } else if (btnType === 'lock' && window.LockModule) {
+            console.log('Updating lock button:', btnId);
+            const success = LockModule.updateConfig(btnId, {
+                entityId: entityId,
+                name: name || 'Lock',
+                iconClass: icon
+            });
+            console.log('Lock update result:', success);
+        } else if (btnType === 'curtain' && window.CurtainModule) {
+            console.log('Updating curtain button:', btnId);
+            const success = CurtainModule.updateConfig(btnId, {
+                entityId: entityId,
+                name: name || 'Curtain',
+                iconClass: icon
+            });
+            console.log('Curtain update result:', success);
         } else {
             console.log('Updating regular button:', btnId);
             const success = buttons.updateButtonConfig(btnId, {
@@ -1489,6 +1643,35 @@ document.addEventListener("DOMContentLoaded", () => {
                                 );
                             }
                         }
+
+                        // Update lock buttons
+                        if (window.LockModule && LockModule.getLockButtons) {
+                            LockModule.getLockButtons().forEach(lock => {
+                                const st = states.find(s => s.entity_id === lock.entityId);
+                                if (st) {
+                                    const isLocked = st.state === 'locked';
+                                    LockModule.handleStateUpdate(
+                                        lock.entityId,
+                                        st.state
+                                    );
+                                }
+                            });
+                        }
+
+                        // Update curtain buttons
+                        if (window.CurtainModule && CurtainModule.getCurtainButtons) {
+                            CurtainModule.getCurtainButtons().forEach(curtain => {
+                                const st = states.find(s => s.entity_id === curtain.entityId);
+                                if (st) {
+                                    const position = st.attributes?.current_position || st.attributes?.position || 50;
+                                    CurtainModule.handleStateUpdate(
+                                        curtain.entityId,
+                                        st.state,
+                                        position
+                                    );
+                                }
+                            });
+                        }
                     }
                 }
             }
@@ -1621,6 +1804,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 newState.state,
                 brightnessPercent,
                 hsColor
+            );
+        }
+        if (window.LockModule && LockModule.handleStateUpdate) {
+            const isLocked = newState.state === 'locked';
+            LockModule.handleStateUpdate(
+                entityId,
+                newState.state
+            );
+        }
+
+        // Handle curtain state updates
+        if (window.CurtainModule && CurtainModule.handleStateUpdate) {
+            const position = newState.attributes?.current_position ||
+                newState.attributes?.position || 50;
+            CurtainModule.handleStateUpdate(
+                entityId,
+                newState.state,
+                position
             );
         }
     }
@@ -1791,7 +1992,56 @@ document.addEventListener("DOMContentLoaded", () => {
 
         btn.disabled = false;
     }
+    // Add these functions to main.js in the appropriate sections:
 
+    // Update Lock via WebSocket
+    function updateLock(entityId, isLocked, buttonId) {
+        if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        const domain = getDomainFromEntityId(entityId);
+
+        if (domain === 'lock') {
+            const service = isLocked ? "lock" : "unlock";
+
+            ws.send(JSON.stringify({
+                id: Date.now(),
+                type: "call_service",
+                domain: "lock",
+                service: service,
+                service_data: {
+                    entity_id: entityId
+                }
+            }));
+
+            updateFooter(`Lock ${isLocked ? 'locked' : 'unlocked'}`);
+        }
+    }
+
+    // Update Curtain via WebSocket
+    function updateCurtain(entityId, position, buttonId) {
+        if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        const domain = getDomainFromEntityId(entityId);
+
+        if (domain === 'cover') {
+            ws.send(JSON.stringify({
+                id: Date.now(),
+                type: "call_service",
+                domain: "cover",
+                service: "set_cover_position",
+                service_data: {
+                    entity_id: entityId,
+                    position: position
+                }
+            }));
+
+            updateFooter(`Curtain position set to ${position}%`);
+        }
+    }
     window.addEventListener("resize", () => {
         const oldScale = scale;
 
@@ -1825,48 +2075,48 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }, { passive: false });
     }
-function fixAllIconsGlobally() {
-    console.log('Performing global icon fix...');
-    
-    // Wait for everything to load
-    setTimeout(() => {
-        if (window.SVGIcons && window.SVGIcons.fixAllButtonIcons) {
-            window.SVGIcons.fixAllButtonIcons();
-        }
-        
-        // Additional cleanup
-        document.querySelectorAll('.light-button').forEach(button => {
-            // Remove any duplicate SVGs
-            const svgs = button.querySelectorAll('.svg-icon');
-            if (svgs.length > 1) {
-                for (let i = 1; i < svgs.length; i++) {
-                    svgs[i].remove();
+    function fixAllIconsGlobally() {
+        console.log('Performing global icon fix...');
+
+        // Wait for everything to load
+        setTimeout(() => {
+            if (window.SVGIcons && window.SVGIcons.fixAllButtonIcons) {
+                window.SVGIcons.fixAllButtonIcons();
+            }
+
+            // Additional cleanup
+            document.querySelectorAll('.light-button').forEach(button => {
+                // Remove any duplicate SVGs
+                const svgs = button.querySelectorAll('.svg-icon');
+                if (svgs.length > 1) {
+                    for (let i = 1; i < svgs.length; i++) {
+                        svgs[i].remove();
+                    }
                 }
-            }
-            
-            // Remove any FontAwesome remnants
-            const faIcons = button.querySelectorAll('.fas, .fa, .far, .fal, .fad, .fab');
-            faIcons.forEach(icon => icon.remove());
-            
-            // Ensure only one icon container
-            let iconContainer = button.querySelector('.icon');
-            if (!iconContainer) {
-                iconContainer = document.createElement('div');
-                iconContainer.className = 'icon';
-                button.appendChild(iconContainer);
-            }
-            
-            // Clear and reload icon
-            const iconName = button.dataset.icon || 'light-bulb-1.svg';
-            if (window.SVGIcons) {
-                window.SVGIcons.clearButtonIcons(button);
-                setTimeout(() => {
-                    window.SVGIcons.setIconImmediately(button, iconName);
-                }, 50);
-            }
-        });
-    }, 1000);
-}
+
+                // Remove any FontAwesome remnants
+                const faIcons = button.querySelectorAll('.fas, .fa, .far, .fal, .fad, .fab');
+                faIcons.forEach(icon => icon.remove());
+
+                // Ensure only one icon container
+                let iconContainer = button.querySelector('.icon');
+                if (!iconContainer) {
+                    iconContainer = document.createElement('div');
+                    iconContainer.className = 'icon';
+                    button.appendChild(iconContainer);
+                }
+
+                // Clear and reload icon
+                const iconName = button.dataset.icon || 'light-bulb-1.svg';
+                if (window.SVGIcons) {
+                    window.SVGIcons.clearButtonIcons(button);
+                    setTimeout(() => {
+                        window.SVGIcons.setIconImmediately(button, iconName);
+                    }, 50);
+                }
+            });
+        }, 1000);
+    }
 
     function init() {
 
@@ -1877,7 +2127,7 @@ function fixAllIconsGlobally() {
         }
         // Load slider values FIRST
         loadSliderValues();
-    setTimeout(fixAllIconsGlobally, 1500);
+        setTimeout(fixAllIconsGlobally, 1500);
 
         // Initialize modules with callbacks
         buttons.init(pan, getImageMetadata, {
@@ -1902,7 +2152,18 @@ function fixAllIconsGlobally() {
                 updateRGB: updateRGB
             });
         }
+        // In the init function, add lock and curtain module initialization:
+        if (window.LockModule && LockModule.init) {
+            LockModule.init({
+                updateLock: updateLock
+            });
+        }
 
+        if (window.CurtainModule && CurtainModule.init) {
+            CurtainModule.init({
+                updateCurtain: updateCurtain
+            });
+        }
         // Initialize image and UI
         initImage();
         setupMobileZoomPrevention();

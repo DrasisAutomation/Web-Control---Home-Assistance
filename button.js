@@ -45,6 +45,18 @@ window.buttons = (function () {
             icon: 'light-bulb-1.svg',
             defaultName: 'RGB Light',
             type: 'rgb'
+        },
+        lock: {
+            name: 'Lock',
+            icon: 'lock.svg',
+            defaultName: 'Lock',
+            type: 'lock'
+        },
+        curtain: {
+            name: 'Curtain',
+            icon: 'curtain1.svg',
+            defaultName: 'Curtain',
+            type: 'curtain'
         }
     };
 
@@ -111,7 +123,7 @@ window.buttons = (function () {
             }
         });
     }
-    
+
     // Create a new button
     function create(config) {
         // Generate unique ID if not provided
@@ -196,25 +208,25 @@ window.buttons = (function () {
         const btn = document.getElementById(buttonId);
         if (!btn) return false;
 
-// 🔴 FIXED ICON UPDATE
-if (newConfig.iconClass) {
-    // Update stored icon
-    buttonData.iconClass = newConfig.iconClass;
-    
-    // Clear and set new icon with proper delay
-    if (window.SVGIcons) {
-        // Clear any existing icons
-        window.SVGIcons.clearButtonIcons(btn);
-        
-        // Update the data attribute
-        btn.dataset.icon = newConfig.iconClass;
-        
-        // Set new icon with a small delay to ensure DOM is ready
-        setTimeout(() => {
-            window.SVGIcons.setIconImmediately(btn, newConfig.iconClass);
-        }, 10);
-    }
-}
+        // 🔴 FIXED ICON UPDATE
+        if (newConfig.iconClass) {
+            // Update stored icon
+            buttonData.iconClass = newConfig.iconClass;
+
+            // Clear and set new icon with proper delay
+            if (window.SVGIcons) {
+                // Clear any existing icons
+                window.SVGIcons.clearButtonIcons(btn);
+
+                // Update the data attribute
+                btn.dataset.icon = newConfig.iconClass;
+
+                // Set new icon with a small delay to ensure DOM is ready
+                setTimeout(() => {
+                    window.SVGIcons.setIconImmediately(btn, newConfig.iconClass);
+                }, 10);
+            }
+        }
 
         // NAME UPDATE
         if (newConfig.name) {
@@ -316,42 +328,42 @@ if (newConfig.iconClass) {
         lightButtons.forEach(createLightButton);
     }
 
-// Create light button with SVG icon (FIXED VERSION)
-function createLightButton(config) {
-    const existingBtn = document.getElementById(config.id);
-    if (existingBtn) existingBtn.remove();
+    // Create light button with SVG icon (FIXED VERSION)
+    function createLightButton(config) {
+        const existingBtn = document.getElementById(config.id);
+        if (existingBtn) existingBtn.remove();
 
-    const button = document.createElement('button');
-    button.id = config.id;
-    button.className = 'light-button';
-    button.dataset.type = config.type || 'toggle';
-    button.dataset.entityId = config.entityId || '';
-    
-    // Store icon name for later
-    button.dataset.icon = config.iconClass || 'light-bulb-1.svg';
-    
-    // Create icon container
-    const iconContainer = document.createElement('div');
-    iconContainer.className = 'icon';
-    button.appendChild(iconContainer);
-    
-    // IMPORTANT: Use a microtask delay to ensure DOM is ready
-    setTimeout(() => {
-        if (window.SVGIcons) {
-            window.SVGIcons.setIconImmediately(button, config.iconClass || 'light-bulb-1.svg');
+        const button = document.createElement('button');
+        button.id = config.id;
+        button.className = 'light-button';
+        button.dataset.type = config.type || 'toggle';
+        button.dataset.entityId = config.entityId || '';
+
+        // Store icon name for later
+        button.dataset.icon = config.iconClass || 'light-bulb-1.svg';
+
+        // Create icon container
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'icon';
+        button.appendChild(iconContainer);
+
+        // IMPORTANT: Use a microtask delay to ensure DOM is ready
+        setTimeout(() => {
+            if (window.SVGIcons) {
+                window.SVGIcons.setIconImmediately(button, config.iconClass || 'light-bulb-1.svg');
+            }
+        }, 0);
+
+        setupButtonEventListeners(button, config);
+
+        // Append to pan layer
+        const panLayer = document.getElementById('panLayer');
+        if (panLayer) {
+            panLayer.appendChild(button);
         }
-    }, 0);
 
-    setupButtonEventListeners(button, config);
-    
-    // Append to pan layer
-    const panLayer = document.getElementById('panLayer');
-    if (panLayer) {
-        panLayer.appendChild(button);
+        return button;
     }
-    
-    return button;
-}
 
     // Set up button event listeners
     function setupButtonEventListeners(button, config) {
@@ -533,7 +545,7 @@ function createLightButton(config) {
         editingButtonId = config.id;
         // Set the editing button ID so it's accessible to the modal
         window.buttons.setEditingButtonId(config.id);
-        
+
         // Also set a global reference for other modules
         window.currentEditingButton = {
             id: config.id,
@@ -562,7 +574,7 @@ function createLightButton(config) {
             editingButtonId = null;
         });
 
-        // Button type selection
+        // In setupModalListeners function, update the button type selection:
         document.querySelectorAll('.button-type-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -612,6 +624,25 @@ function createLightButton(config) {
                             hue: 180,
                             isOn: false,
                             type: 'rgb'
+                        });
+                    } else if (type === 'lock' && window.LockModule && typeof LockModule.create === 'function') {
+                        LockModule.create({
+                            entityId: entityId.trim(),
+                            name: name,
+                            position: position,
+                            iconClass: icon,
+                            isLocked: true,
+                            type: 'lock'
+                        });
+                    } else if (type === 'curtain' && window.CurtainModule && typeof CurtainModule.create === 'function') {
+                        CurtainModule.create({
+                            entityId: entityId.trim(),
+                            name: name,
+                            position: position,
+                            iconClass: icon,
+                            currentPosition: 50,
+                            isOpen: false,
+                            type: 'curtain'
                         });
                     } else {
                         // For toggle and scene buttons
@@ -677,7 +708,7 @@ function createLightButton(config) {
             });
         }
 
-        // Delete button
+        // In the delete button event listener, add lock and curtain support:
         document.getElementById('deleteBtn')?.addEventListener('click', () => {
             if (editingButtonId && confirm('Are you sure you want to delete this button?')) {
                 // Check button type and route to appropriate module
@@ -694,6 +725,12 @@ function createLightButton(config) {
                         isSpecialButton = true;
                     } else if (btn.classList.contains('rgb') && window.RGBModule && RGBModule.deleteButton) {
                         module = RGBModule;
+                        isSpecialButton = true;
+                    } else if (btn.classList.contains('lock') && window.LockModule && LockModule.deleteButton) {
+                        module = LockModule;
+                        isSpecialButton = true;
+                    } else if (btn.classList.contains('curtain') && window.CurtainModule && CurtainModule.deleteButton) {
+                        module = CurtainModule;
                         isSpecialButton = true;
                     }
                 }
