@@ -93,12 +93,12 @@ document.addEventListener("DOMContentLoaded", () => {
     let dragStart = { x: 0, y: 0 };
     let panStart = { x: 0, y: 0 };
 
-    // const WS_URL = "wss://demo.lumihomepro1.com/api/websocket";
-    // const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzNGNlNThiNDk1Nzk0NDVmYjUxNzE2NDA0N2Q0MGNmZCIsImlhdCI6MTc2NTM0NzQ5MSwiZXhwIjoyMDgwNzA3NDkxfQ.Se5PGwx0U9aqyVRnD1uwvCv3F-aOE8H53CKA5TqsV7U";
+    const WS_URL = "wss://demo.lumihomepro1.com/api/websocket";
+    const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzNGNlNThiNDk1Nzk0NDVmYjUxNzE2NDA0N2Q0MGNmZCIsImlhdCI6MTc2NTM0NzQ5MSwiZXhwIjoyMDgwNzA3NDkxfQ.Se5PGwx0U9aqyVRnD1uwvCv3F-aOE8H53CKA5TqsV7U";
 
-    const WS_URL = "ws://192.168.2.204:8123/api/websocket";
+    // const WS_URL = "ws://192.168.2.204:8123/api/websocket";
 
-    const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzY2FhY2ZlMzA3YTc0MGZjODdmZGU5MDBhNTZkOTdjOCIsImlhdCI6MTc2NjQ3MzA4OCwiZXhwIjoyMDgxODMzMDg4fQ.xX2oNK1vd-a76axwTJeeIhFyeu53lhMBUwf9qmgHe4E";
+    // const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzY2FhY2ZlMzA3YTc0MGZjODdmZGU5MDBhNTZkOTdjOCIsImlhdCI6MTc2NjQ3MzA4OCwiZXhwIjoyMDgxODMzMDg4fQ.xX2oNK1vd-a76axwTJeeIhFyeu53lhMBUwf9qmgHe4E";
 
     let ws, ready = false;
 
