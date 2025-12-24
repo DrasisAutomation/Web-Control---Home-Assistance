@@ -1,6 +1,6 @@
 {
   "meta": {
-    "savedAt": "2025-12-24T11:00:51.396Z",
+    "savedAt": "2025-12-24T11:37:35.149Z",
     "version": "2.0",
     "totalButtons": 12
   },
@@ -153,8 +153,8 @@
       "name": "Remote",
       "iconClass": "remote.svg",
       "position": {
-        "x": 0.7105,
-        "y": 0.3723
+        "x": 0.5158,
+        "y": 0.9327
       },
       "remoteConfig": [
         {
