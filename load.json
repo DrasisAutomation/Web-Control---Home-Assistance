@@ -1,8 +1,8 @@
 {
   "meta": {
-    "savedAt": "2025-12-23T06:42:19.128Z",
+    "savedAt": "2025-12-24T11:00:51.396Z",
     "version": "2.0",
-    "totalButtons": 18
+    "totalButtons": 12
   },
   "settings": {
     "buttonSize": 0.8,
@@ -147,95 +147,37 @@
       "isOpen": true
     },
     {
-      "id": "curtain_1766471028484_2ov7bl5i2",
-      "type": "curtain",
-      "entityId": "cover.exp_room_curtain_outbound_bottom",
-      "name": "Curtain",
-      "iconClass": "curtain1.svg",
+      "id": "remote_1766572902999_roisxmjtq",
+      "type": "remote",
+      "entityId": "remote.sheild",
+      "name": "Remote",
+      "iconClass": "remote.svg",
       "position": {
-        "x": 0.4921,
-        "y": 0.4322
+        "x": 0.7105,
+        "y": 0.3723
       },
-      "currentPosition": 50,
-      "isOpen": true
-    },
-    {
-      "id": "curtain_1766471028484_2ov7bl5i2",
-      "type": "curtain",
-      "entityId": "cover.exp_room_curtain_outbound_bottom",
-      "name": "Curtain",
-      "iconClass": "curtain1.svg",
-      "position": {
-        "x": 0.4921,
-        "y": 0.4322
-      },
-      "currentPosition": 50,
-      "isOpen": true
-    },
-    {
-      "id": "curtain_1766471028484_2ov7bl5i2",
-      "type": "curtain",
-      "entityId": "cover.exp_room_curtain_outbound_bottom",
-      "name": "Curtain",
-      "iconClass": "curtain1.svg",
-      "position": {
-        "x": 0.4921,
-        "y": 0.4322
-      },
-      "currentPosition": 50,
-      "isOpen": true
-    },
-    {
-      "id": "curtain_1766471028484_2ov7bl5i2",
-      "type": "curtain",
-      "entityId": "cover.exp_room_curtain_outbound_bottom",
-      "name": "Curtain",
-      "iconClass": "curtain1.svg",
-      "position": {
-        "x": 0.4921,
-        "y": 0.4322
-      },
-      "currentPosition": 50,
-      "isOpen": true
-    },
-    {
-      "id": "curtain_1766471028484_2ov7bl5i2",
-      "type": "curtain",
-      "entityId": "cover.exp_room_curtain_outbound_bottom",
-      "name": "Curtain",
-      "iconClass": "curtain1.svg",
-      "position": {
-        "x": 0.4921,
-        "y": 0.4322
-      },
-      "currentPosition": 50,
-      "isOpen": true
-    },
-    {
-      "id": "curtain_1766471028484_2ov7bl5i2",
-      "type": "curtain",
-      "entityId": "cover.exp_room_curtain_outbound_bottom",
-      "name": "Curtain",
-      "iconClass": "curtain1.svg",
-      "position": {
-        "x": 0.4921,
-        "y": 0.4322
-      },
-      "currentPosition": 50,
-      "isOpen": true
-    },
-    {
-      "id": "curtain_1766471028484_2ov7bl5i2",
-      "type": "curtain",
-      "entityId": "cover.exp_room_curtain_outbound_bottom",
-      "name": "Curtain",
-      "iconClass": "curtain1.svg",
-      "position": {
-        "x": 0.4921,
-        "y": 0.4322
-      },
-      "currentPosition": 50,
-      "isOpen": true
+      "remoteConfig": [
+        {
+          "icon": "home.svg",
+          "text": "New Button",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.sheild",
+          "service": "remote.send_command",
+          "command": "DPAD_RIGHT"
+        },
+        {
+          "icon": "arrow-right.svg",
+          "text": "New Button",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.sheild",
+          "service": "remote.send_command",
+          "command": "DPAD_RIGHT"
+        }
+      ]
     }
   ]
 }

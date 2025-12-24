@@ -11,7 +11,7 @@
 
 <body>
     <!-- Your existing HTML structure remains the same -->
-    <div class="header">
+    <div class="header" style="display: none;">
         <button class="edit-btn" id="editBtn">✎ Edit</button>
         <button class="header-control save-btn" id="saveBtn">💾 Save</button>
         <button id="clearAllBtn" class="header-control clear-all-btn"
@@ -104,6 +104,11 @@
                         <i class="fas fa-blinds"></i>
                         <span>Curtain</span>
                         <small>Position control for curtains</small>
+                    </div>
+                    <div class="button-type-item" data-type="remote" data-icon="remote.svg">
+                        <i class="fas fa-gamepad"></i>
+                        <span>Remote</span>
+                        <small>Smart remote control</small>
                     </div>
                 </div>
             </div>
@@ -276,9 +281,9 @@
     <script src="dimmer.js"></script>
     <script src="cct.js"></script>
     <script src="rgb.js"></script>
-    <!-- Add these script tags after rgb.js -->
     <script src="lock.js"></script>
     <script src="curtain.js"></script>
+    <script src="remote.js"></script>
     <script src="main.js"></script>
 </body>
 
