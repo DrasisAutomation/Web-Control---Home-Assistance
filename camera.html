@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Control</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Center the button */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: transparent;
+        }
+
+        .toggle-button {
+            width: 40px;
+            height: 40px;
+            background-color: white;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 0;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+        }
+
+        .toggle-button:hover {
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .toggle-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .toggle-button.active {
+            box-shadow: 0 0 15px rgba(66, 133, 244, 0.5);
+        }
+
+        .toggle-button .icon {
+            font-size: 18px;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-button.active .icon {
+            color: #4285f4;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            border-radius: 12px;
+            width: 600px;
+            height: 500px;
+            padding: 20px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #ffffff;
+            z-index: 1001;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .close-modal:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ff3333;
+        }
+
+        .modal-title-text {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            width: 100%;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .camera-preview-container {
+            width: 100%;
+            height: 380px;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .camera-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #888;
+            font-family: Arial, sans-serif;
+        }
+
+        .camera-placeholder i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #555;
+        }
+
+        .camera-placeholder span {
+            font-size: 16px;
+            color: #aaa;
+        }
+
+        .camera-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .camera-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+            font-size: 20px;
+        }
+
+        .camera-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .camera-btn.record {
+            background: rgba(255, 0, 0, 0.2);
+        }
+
+        .camera-btn.record:hover {
+            background: rgba(255, 0, 0, 0.3);
+        }
+
+        .camera-btn.active {
+            background: rgba(66, 133, 244, 0.3);
+        }
+
+        .camera-status {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: Arial, sans-serif;
+            z-index: 2;
+        }
+
+        .timestamp {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: Arial, sans-serif;
+            z-index: 2;
+        }
+
+        .camera-info {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: Arial, sans-serif;
+            z-index: 2;
+        }
+
+        .loading-spinner {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3;
+        }
+
+        .loading-spinner i {
+            font-size: 32px;
+            color: #4285f4;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <button class="toggle-button" id="toggleBtn" disabled>
+        <i class="fas fa-video icon" id="cameraIcon"></i>
+    </button>
+
+    <!-- Camera Modal -->
+    <div class="modal-overlay" id="cameraModal">
+        <div class="modal-content">
+            <div class="modal-title-text">Camera Preview</div>
+
+            <button class="close-modal" id="closeModal">&times;</button>
+
+            <div class="camera-preview-container" id="cameraPreview">
+                <div class="camera-placeholder" id="cameraPlaceholder">
+                    <i class="fas fa-video"></i>
+                    <span>Camera feed will appear here</span>
+                </div>
+                <img class="camera-preview" id="cameraImage" style="display: none;" alt="Camera Feed">
+                
+                <div class="loading-spinner" id="loadingSpinner">
+                    <i class="fas fa-spinner"></i>
+                </div>
+                
+                <div class="camera-status" id="cameraStatus">Connecting...</div>
+                <div class="timestamp" id="timestamp"></div>
+                <div class="camera-info" id="cameraInfo">HD • 30fps</div>
+            </div>
+
+            <div class="camera-controls">
+                <button class="camera-btn" id="playBtn" title="Play">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button class="camera-btn" id="pauseBtn" title="Pause">
+                    <i class="fas fa-pause"></i>
+                </button>
+                <button class="camera-btn" id="snapshotBtn" title="Take Snapshot">
+                    <i class="fas fa-camera"></i>
+                </button>
+                <button class="camera-btn record" id="recordBtn" title="Start Recording">
+                    <i class="fas fa-circle"></i>
+                </button>
+                <button class="camera-btn" id="fullscreenBtn" title="Fullscreen">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// WebSocket configuration - Update these for your camera
+const WS_URL = "wss://demo.lumihomepro1.com/api/websocket";
+const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzNGNlNThiNDk1Nzk0NDVmYjUxNzE2NDA0N2Q0MGNmZCIsImlhdCI6MTc2NTM0NzQ5MSwiZXhwIjoyMDgwNzA3NDkxfQ.Se5PGwx0U9aqyVRnD1uwvCv3F-aOE8H53CKA5TqsV7U";
+const CAMERA_ENTITY = "camera.192_168_2_67"; // Replace with your camera entity
+
+let ws, ready = false, isPlaying = false, isRecording = false;
+const toggleBtn = document.getElementById('toggleBtn');
+const cameraIcon = document.getElementById('cameraIcon');
+const cameraModal = document.getElementById('cameraModal');
+const closeModal = document.getElementById('closeModal');
+const cameraPreview = document.getElementById('cameraPreview');
+const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+const cameraImage = document.getElementById('cameraImage');
+const loadingSpinner = document.getElementById('loadingSpinner');
+const cameraStatus = document.getElementById('cameraStatus');
+const timestamp = document.getElementById('timestamp');
+const cameraInfo = document.getElementById('cameraInfo');
+const playBtn = document.getElementById('playBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const snapshotBtn = document.getElementById('snapshotBtn');
+const recordBtn = document.getElementById('recordBtn');
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+let refreshInterval;
+let streamUrl = "";
+
+// Make the button draggable
+function makeButtonDraggable(btn) {
+    let isDrag = false, startX, startY, origX, origY;
+
+    btn.addEventListener("mousedown", e => {
+        isDrag = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        origX = btn.offsetLeft;
+        origY = btn.offsetTop;
+        btn.style.cursor = "grabbing";
+        e.stopPropagation();
+    });
+
+    window.addEventListener("mousemove", e => {
+        if (!isDrag) return;
+        let dx = e.clientX - startX;
+        let dy = e.clientY - startY;
+        btn.style.left = (origX + dx) + "px";
+        btn.style.top = (origY + dy) + "px";
+    });
+
+    window.addEventListener("mouseup", () => {
+        isDrag = false;
+        btn.style.cursor = "grab";
+    });
+}
+
+// Connect to WebSocket
+function connectWebSocket() {
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+        console.log("WebSocket connected");
+        ws.send(JSON.stringify({ type: "auth", access_token: TOKEN }));
+    };
+
+    ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        console.log("Message received:", data);
+
+        if (data.type === "auth_ok") {
+            console.log("Authentication successful");
+            ready = true;
+            toggleBtn.disabled = false;
+            
+            // Get camera stream URL when authenticated
+            setTimeout(() => {
+                getCameraStream();
+            }, 100);
+        }
+        else if (data.type === "result" && data.id === 10) {
+            if (data.success && data.result) {
+                // Camera stream URL received
+                streamUrl = data.result;
+                console.log("Camera stream URL:", streamUrl);
+                updateCameraStatus("Connected");
+            }
+        }
+        else if (data.type === "result" && data.id === 11) {
+            // Snapshot received
+            if (data.success && data.result) {
+                showSnapshot(data.result);
+            }
+        }
+    };
+
+    ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        toggleBtn.disabled = true;
+        updateCameraStatus("Connection Error");
+    };
+
+    ws.onclose = () => {
+        console.log("WebSocket disconnected");
+        toggleBtn.disabled = true;
+        ready = false;
+        updateCameraStatus("Disconnected");
+        stopCameraStream();
+        setTimeout(connectWebSocket, 3000);
+    };
+}
+
+// Get camera stream URL
+function getCameraStream() {
+    if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
+        console.log("Not ready to get camera stream");
+        return;
+    }
+
+    // Request camera stream URL
+    ws.send(JSON.stringify({
+        id: 10,
+        type: "camera/stream",
+        entity_id: CAMERA_ENTITY
+    }));
+    
+    updateCameraStatus("Requesting stream...");
+}
+
+// Take snapshot
+function takeSnapshot() {
+    if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
+        console.log("Not ready to take snapshot");
+        return;
+    }
+
+    loadingSpinner.style.display = 'block';
+    
+    ws.send(JSON.stringify({
+        id: 11,
+        type: "camera/snapshot",
+        entity_id: CAMERA_ENTITY
+    }));
+}
+
+// Show snapshot image
+function showSnapshot(imageData) {
+    loadingSpinner.style.display = 'none';
+    cameraPlaceholder.style.display = 'none';
+    cameraImage.style.display = 'block';
+    cameraImage.src = "data:image/jpeg;base64," + imageData;
+    
+    // Update timestamp
+    const now = new Date();
+    timestamp.textContent = now.toLocaleTimeString();
+}
+
+// Start camera stream
+function startCameraStream() {
+    if (!streamUrl) {
+        console.log("No stream URL available");
+        updateCameraStatus("No stream URL");
+        return;
+    }
+
+    stopCameraStream();
+    
+    loadingSpinner.style.display = 'block';
+    updateCameraStatus("Loading stream...");
+    
+    // Start refreshing the snapshot every 2 seconds
+    refreshInterval = setInterval(() => {
+        takeSnapshot();
+    }, 2000);
+    
+    isPlaying = true;
+    updateControlButtons();
+    cameraStatus.textContent = "Streaming";
+}
+
+// Stop camera stream
+function stopCameraStream() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+    }
+    
+    isPlaying = false;
+    updateControlButtons();
+    loadingSpinner.style.display = 'none';
+    
+    if (!cameraImage.src.includes("data:image")) {
+        cameraPlaceholder.style.display = 'flex';
+        cameraImage.style.display = 'none';
+    }
+}
+
+// Update camera status
+function updateCameraStatus(status) {
+    cameraStatus.textContent = status;
+}
+
+// Update control buttons state
+function updateControlButtons() {
+    if (isPlaying) {
+        playBtn.classList.remove('active');
+        pauseBtn.classList.add('active');
+    } else {
+        playBtn.classList.add('active');
+        pauseBtn.classList.remove('active');
+    }
+    
+    if (isRecording) {
+        recordBtn.classList.add('active');
+        recordBtn.innerHTML = '<i class="fas fa-square"></i>';
+    } else {
+        recordBtn.classList.remove('active');
+        recordBtn.innerHTML = '<i class="fas fa-circle"></i>';
+    }
+}
+
+// Open camera modal
+function openCameraModal() {
+    cameraModal.style.display = 'flex';
+    toggleBtn.classList.add('active');
+    
+    // Start the stream when modal opens
+    setTimeout(() => {
+        startCameraStream();
+    }, 500);
+}
+
+// Close camera modal
+function closeCameraModal() {
+    cameraModal.style.display = 'none';
+    toggleBtn.classList.remove('active');
+    stopCameraStream();
+}
+
+// Toggle recording
+function toggleRecording() {
+    isRecording = !isRecording;
+    updateControlButtons();
+    
+    if (isRecording) {
+        cameraStatus.textContent = "Recording...";
+        // In a real implementation, you would start recording here
+        console.log("Recording started");
+    } else {
+        cameraStatus.textContent = "Streaming";
+        // Stop recording
+        console.log("Recording stopped");
+    }
+}
+
+// Take snapshot
+function takeSnapshotHandler() {
+    takeSnapshot();
+    // Show feedback
+    snapshotBtn.innerHTML = '<i class="fas fa-check"></i>';
+    setTimeout(() => {
+        snapshotBtn.innerHTML = '<i class="fas fa-camera"></i>';
+    }, 1000);
+}
+
+// Toggle fullscreen
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        cameraPreview.requestFullscreen().catch(err => {
+            console.log(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+        fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+            fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+        }
+    }
+}
+
+// Event Listeners
+toggleBtn.addEventListener('click', openCameraModal);
+closeModal.addEventListener('click', closeCameraModal);
+
+playBtn.addEventListener('click', startCameraStream);
+pauseBtn.addEventListener('click', stopCameraStream);
+snapshotBtn.addEventListener('click', takeSnapshotHandler);
+recordBtn.addEventListener('click', toggleRecording);
+fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+// Close modal when clicking outside
+cameraModal.addEventListener('click', (e) => {
+    if (e.target === cameraModal) {
+        closeCameraModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && cameraModal.style.display === 'flex') {
+        closeCameraModal();
+    }
+});
+
+// Update timestamp every second
+setInterval(() => {
+    if (cameraModal.style.display === 'flex' && timestamp.textContent) {
+        const now = new Date();
+        timestamp.textContent = now.toLocaleTimeString();
+    }
+}, 1000);
+
+// Initialize
+makeButtonDraggable(toggleBtn);
+connectWebSocket();
+
+// Handle fullscreen change
+document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+        fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+    }
+});
+</script>
+</body>
+</html>

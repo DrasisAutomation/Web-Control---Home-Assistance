@@ -353,27 +353,23 @@ window.CCTModule = (function () {
         if (callback) callback(clampedValue);
     }
 
-    // Simplified touch handler for vertical slider
-    function handleVerticalSliderTouchSimple(slider, touch, callback) {
-        const rect = slider.getBoundingClientRect();
-        
-        // Since the slider is rotated -90deg, we need to handle coordinates differently
-        // The slider's visual top is actually its left side after rotation
-        
-        // Get touch position relative to slider
-        const relativeY = touch.clientY - rect.top;
-        const percent = relativeY / rect.height;
-        
-        // Map: Top of slider (0% height) = 0% value, Bottom of slider (100% height) = 100% value
-        // This means dragging down increases the value
-        const value = Math.round(percent * 100);
-        
-        // Clamp to 0-100
-        const clampedValue = Math.max(0, Math.min(100, value));
-        
-        slider.value = clampedValue;
-        if (callback) callback(clampedValue);
-    }
+// Alternative: Dragging DOWN increases value
+function handleVerticalSliderTouchSimple(slider, touch, callback) {
+    const rect = slider.getBoundingClientRect();
+    
+    // Get touch position relative to slider
+    const relativeY = touch.clientY - rect.top;
+    const percent = relativeY / rect.height;
+    
+    // This gives: Top = 0%, Bottom = 100%
+    const value = Math.round(percent * 100);
+    
+    // Clamp to 0-100
+    const clampedValue = Math.max(0, Math.min(100, value));
+    
+    slider.value = clampedValue;
+    if (callback) callback(clampedValue);
+}
 
     // Initialize the module
     function init(cb) {
