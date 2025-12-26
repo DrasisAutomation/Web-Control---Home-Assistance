@@ -7,6 +7,7 @@ window.RemoteModule = (() => {
     let remoteEditModal = null
     let remoteGrid = null
     let callbacks = {}
+    let bodyScrollY = 0
     let isEditMode = false
     let isDragging = false
     let longPressTimer = null
@@ -118,11 +119,13 @@ window.RemoteModule = (() => {
       }
 
       /* Except for buttons */
-      .remote-control-btn,
-      .remote-icon-option,
-      .remote-btn {
-        touch-action: manipulation;
-      }
+/* Buttons should NOT block vertical scroll */
+.remote-control-btn,
+.remote-icon-option,
+.remote-btn {
+  touch-action: pan-y;
+}
+
 
       /* Mobile-specific styles */
       @media (max-width: 768px) {
@@ -632,10 +635,6 @@ window.RemoteModule = (() => {
         fill: white !important;
       }
 
-      /* Prevent body scroll when modal is open */
-      body.modal-open {
-        overflow: hidden;
-      }
         .remote-control-content,
 .remote-icon-grid,
 .remote-edit-form {
@@ -1158,8 +1157,6 @@ window.RemoteModule = (() => {
             button.style.left = `${originalLeft + deltaX}px`
             button.style.top = `${originalTop + deltaY}px`
 
-            // ONLY block scroll while dragging button
-            moveEvent.preventDefault()
         }
 
 
@@ -1191,13 +1188,13 @@ window.RemoteModule = (() => {
             }
 
             document.removeEventListener("mousemove", dragMoveHandler)
-            document.removeEventListener("touchmove", dragMoveHandler)
             document.removeEventListener("mouseup", dragEndHandler)
             document.removeEventListener("touchend", dragEndHandler)
         }
 
         document.addEventListener("mousemove", dragMoveHandler)
-        document.addEventListener("touchmove", dragMoveHandler, { passive: false })
+        button.addEventListener("touchmove", dragMoveHandler, { passive: false })
+
         document.addEventListener("mouseup", dragEndHandler)
         document.addEventListener("touchend", dragEndHandler)
     }
@@ -1259,6 +1256,11 @@ window.RemoteModule = (() => {
 
     // Open remote control modal (for using the remote)
     async function openRemoteModal(config) {
+        bodyScrollY = window.scrollY
+        document.body.style.position = 'fixed'
+        document.body.style.top = `-${bodyScrollY}px`
+        document.body.style.width = '100%'
+
         console.log("Opening remote control for:", config.name)
 
         currentRemote = config
@@ -1301,6 +1303,11 @@ window.RemoteModule = (() => {
 
     // Close remote modal
     function closeRemoteModal() {
+        document.body.style.position = ''
+        document.body.style.top = ''
+        document.body.style.width = ''
+        window.scrollTo(0, bodyScrollY)
+
         remoteModal.style.display = "none"
         currentRemote = null
         currentEditingRemoteButtonIndex = null
