@@ -353,23 +353,27 @@ window.CCTModule = (function () {
         if (callback) callback(clampedValue);
     }
 
-// Alternative: Dragging DOWN increases value
-function handleVerticalSliderTouchSimple(slider, touch, callback) {
-    const rect = slider.getBoundingClientRect();
-    
-    // Get touch position relative to slider
-    const relativeY = touch.clientY - rect.top;
-    const percent = relativeY / rect.height;
-    
-    // This gives: Top = 0%, Bottom = 100%
-    const value = Math.round(percent * 100);
-    
-    // Clamp to 0-100
-    const clampedValue = Math.max(0, Math.min(100, value));
-    
-    slider.value = clampedValue;
-    if (callback) callback(clampedValue);
-}
+    // Simplified touch handler for vertical slider
+    function handleVerticalSliderTouchSimple(slider, touch, callback) {
+        const rect = slider.getBoundingClientRect();
+        
+        // Since the slider is rotated -90deg, we need to handle coordinates differently
+        // The slider's visual top is actually its left side after rotation
+        
+        // Get touch position relative to slider
+        const relativeY = touch.clientY - rect.top;
+        const percent = relativeY / rect.height;
+        
+        // Map: Top of slider (0% height) = 0% value, Bottom of slider (100% height) = 100% value
+        // This means dragging down increases the value
+        const value = Math.round(percent * 100);
+        
+        // Clamp to 0-100
+        const clampedValue = Math.max(0, Math.min(100, value));
+        
+        slider.value = clampedValue;
+        if (callback) callback(clampedValue);
+    }
 
     // Initialize the module
     function init(cb) {
@@ -956,26 +960,37 @@ function handleVerticalSliderTouchSimple(slider, touch, callback) {
             });
 
             // FIXED TOUCH EVENTS for brightness slider
-            brightnessSlider.addEventListener('touchstart', (e) => {
-                e.stopPropagation();
-                const touch = e.touches[0];
-                handleVerticalSliderTouchSimple(brightnessSlider, touch, (value) => {
-                    if (brightnessValue) {
-                        brightnessValue.textContent = `${value}%`;
-                    }
-                });
-            }, { passive: false });
-
-            brightnessSlider.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const touch = e.touches[0];
-                handleVerticalSliderTouchSimple(brightnessSlider, touch, (value) => {
-                    if (brightnessValue) {
-                        brightnessValue.textContent = `${value}%`;
-                    }
-                });
-            }, { passive: false });
+brightnessSlider.addEventListener('touchstart', (e) => {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    // Use the FIXED version
+    const rect = brightnessSlider.getBoundingClientRect();
+    const relativeY = touch.clientY - rect.top;
+    const percent = relativeY / rect.height;
+    const value = Math.round((1 - percent) * 100); // INVERT HERE
+    const clampedValue = Math.max(0, Math.min(100, value));
+    
+    brightnessSlider.value = clampedValue;
+    if (brightnessValue) {
+        brightnessValue.textContent = `${clampedValue}%`;
+    }
+}, { passive: false });
+brightnessSlider.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const touch = e.touches[0];
+    // Use the FIXED version
+    const rect = brightnessSlider.getBoundingClientRect();
+    const relativeY = touch.clientY - rect.top;
+    const percent = relativeY / rect.height;
+    const value = Math.round((1 - percent) * 100); // INVERT HERE
+    const clampedValue = Math.max(0, Math.min(100, value));
+    
+    brightnessSlider.value = clampedValue;
+    if (brightnessValue) {
+        brightnessValue.textContent = `${clampedValue}%`;
+    }
+}, { passive: false });
 
             brightnessSlider.addEventListener('touchend', (e) => {
                 const value = parseInt(brightnessSlider.value);
@@ -996,18 +1011,34 @@ function handleVerticalSliderTouchSimple(slider, touch, callback) {
             });
 
             // FIXED TOUCH EVENTS for temperature slider
-            temperatureSlider.addEventListener('touchstart', (e) => {
-                e.stopPropagation();
-                const touch = e.touches[0];
-                handleVerticalSliderTouchSimple(temperatureSlider, touch, updateKelvinDisplay);
-            }, { passive: false });
+temperatureSlider.addEventListener('touchstart', (e) => {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    // Use the FIXED version
+    const rect = temperatureSlider.getBoundingClientRect();
+    const relativeY = touch.clientY - rect.top;
+    const percent = relativeY / rect.height;
+    const value = Math.round((1 - percent) * 100); // INVERT HERE
+    const clampedValue = Math.max(0, Math.min(100, value));
+    
+    temperatureSlider.value = clampedValue;
+    updateKelvinDisplay(clampedValue);
+}, { passive: false });
 
-            temperatureSlider.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const touch = e.touches[0];
-                handleVerticalSliderTouchSimple(temperatureSlider, touch, updateKelvinDisplay);
-            }, { passive: false });
+temperatureSlider.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const touch = e.touches[0];
+    // Use the FIXED version
+    const rect = temperatureSlider.getBoundingClientRect();
+    const relativeY = touch.clientY - rect.top;
+    const percent = relativeY / rect.height;
+    const value = Math.round((1 - percent) * 100); // INVERT HERE
+    const clampedValue = Math.max(0, Math.min(100, value));
+    
+    temperatureSlider.value = clampedValue;
+    updateKelvinDisplay(clampedValue);
+}, { passive: false });
 
             temperatureSlider.addEventListener('touchend', (e) => {
                 const value = parseInt(temperatureSlider.value);
