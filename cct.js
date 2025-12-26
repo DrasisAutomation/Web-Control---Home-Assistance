@@ -713,30 +713,30 @@ window.CCTModule = (function () {
     // Show edit modal for CCT
     function showEditModal(config) {
         console.log('CCT: Opening edit modal for:', config.id, 'type: cct');
-        
+
         // Mark button as selected
         if (window.selectButtonForEdit) {
             window.selectButtonForEdit(config.id, 'cct');
         }
-        
+
         // Fill the edit form
         const editEntityId = document.getElementById('editEntityId');
         const editName = document.getElementById('editName');
         const editIcon = document.getElementById('editIcon');
-        
+
         if (editEntityId) editEntityId.value = config.entityId || '';
         if (editName) editName.value = config.name || 'CCT Light';
         if (editIcon) editIcon.value = config.iconClass || 'light-bulb-1.svg';
-        
+
         // Store which button we're editing
         window.currentEditingButton = config.id;
         window.currentEditingType = 'cct';
-        
+
         // Also set in buttons module
         if (window.buttons && window.buttons.setEditingButtonId) {
             window.buttons.setEditingButtonId(config.id);
         }
-        
+
         // Show modal
         const modal = document.getElementById('buttonEditModal');
         if (modal) {
@@ -901,20 +901,69 @@ window.CCTModule = (function () {
                 const value = parseInt(e.target.value);
                 updateBrightness(value);
             });
+            brightnessSlider.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+            }, { passive: true });
+
+            brightnessSlider.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const touch = e.touches[0];
+                const rect = brightnessSlider.getBoundingClientRect();
+                const y = rect.bottom - touch.clientY;
+                const percent = Math.min(Math.max(y / rect.height, 0), 1);
+                const value = Math.round(100 - (percent * 100));
+
+                brightnessSlider.value = value;
+                if (brightnessValue) {
+                    brightnessValue.textContent = `${value}%`;
+                }
+            }, { passive: false });
+
+            brightnessSlider.addEventListener('touchend', (e) => {
+                const value = parseInt(brightnessSlider.value);
+                updateBrightness(value);
+            }, { passive: true });
         }
 
-        // Temperature slider - update display while dragging
+        // Temperature slider - update display while dragging (TOUCH FIXED)
         if (temperatureSlider) {
+            // For mouse
             temperatureSlider.addEventListener('input', (e) => {
                 const value = parseInt(e.target.value);
                 updateKelvinDisplay(value);
             });
 
-            // Temperature slider - update when released
+            // For mouse release
             temperatureSlider.addEventListener('change', (e) => {
                 const value = parseInt(e.target.value);
                 updateTemperature(value);
             });
+
+            // TOUCH SUPPORT - FIXED
+            temperatureSlider.addEventListener('touchstart', (e) => {
+                e.stopPropagation(); // Prevent panning
+            }, { passive: true });
+
+            temperatureSlider.addEventListener('touchmove', (e) => {
+                e.preventDefault(); // Allow touch dragging
+                e.stopPropagation();
+
+                const touch = e.touches[0];
+                const rect = temperatureSlider.getBoundingClientRect();
+                const y = rect.bottom - touch.clientY;
+                const percent = Math.min(Math.max(y / rect.height, 0), 1);
+                const value = Math.round(100 - (percent * 100));
+
+                temperatureSlider.value = value;
+                updateKelvinDisplay(value);
+            }, { passive: false });
+
+            temperatureSlider.addEventListener('touchend', (e) => {
+                const value = parseInt(temperatureSlider.value);
+                updateTemperature(value);
+            }, { passive: true });
         }
     }
 
