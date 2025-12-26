@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* Center the button */
-        body, html {
+        body,
+        html {
             margin: 0;
             padding: 0;
             width: 100%;
@@ -76,7 +78,7 @@
         }
 
         .modal-content {
-            background: #1a1a1a;
+            background: #ffffff;
             border-radius: 12px;
             width: 600px;
             height: 500px;
@@ -96,7 +98,7 @@
             border: none;
             font-size: 24px;
             cursor: pointer;
-            color: #ffffff;
+            color: #000000;
             z-index: 1001;
             width: 40px;
             height: 40px;
@@ -116,7 +118,7 @@
             font-size: 20px;
             font-weight: 600;
             margin-bottom: 20px;
-            color: white;
+            color: rgb(0, 0, 0);
             font-family: Arial, sans-serif;
             text-align: center;
             width: 100%;
@@ -170,7 +172,7 @@
         }
 
         .camera-btn {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
             border: none;
             border-radius: 50%;
             width: 50px;
@@ -180,7 +182,7 @@
             align-items: center;
             cursor: pointer;
             transition: all 0.3s ease;
-            color: white;
+            color: rgb(0, 0, 0);
             font-size: 20px;
         }
 
@@ -256,11 +258,17 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
+
 <body>
     <button class="toggle-button" id="toggleBtn" disabled>
         <i class="fas fa-video icon" id="cameraIcon"></i>
@@ -279,11 +287,11 @@
                     <span>Camera feed will appear here</span>
                 </div>
                 <img class="camera-preview" id="cameraImage" style="display: none;" alt="Camera Feed">
-                
+
                 <div class="loading-spinner" id="loadingSpinner">
                     <i class="fas fa-spinner"></i>
                 </div>
-                
+
                 <div class="camera-status" id="cameraStatus">Connecting...</div>
                 <div class="timestamp" id="timestamp"></div>
                 <div class="camera-info" id="cameraInfo">HD • 30fps</div>
@@ -309,326 +317,365 @@
         </div>
     </div>
 
-<script>
-// WebSocket configuration - Update these for your camera
-const WS_URL = "wss://demo.lumihomepro1.com/api/websocket";
-const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzNGNlNThiNDk1Nzk0NDVmYjUxNzE2NDA0N2Q0MGNmZCIsImlhdCI6MTc2NTM0NzQ5MSwiZXhwIjoyMDgwNzA3NDkxfQ.Se5PGwx0U9aqyVRnD1uwvCv3F-aOE8H53CKA5TqsV7U";
-const CAMERA_ENTITY = "camera.192_168_2_67"; // Replace with your camera entity
+    <script>
+        // WebSocket configuration
+        const WS_URL = "wss://demo.lumihomepro1.com/api/websocket";
+        const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzNGNlNThiNDk1Nzk0NDVmYjUxNzE2NDA0N2Q0MGNmZCIsImlhdCI6MTc2NTM0NzQ5MSwiZXhwIjoyMDgwNzA3NDkxfQ.Se5PGwx0U9aqyVRnD1uwvCv3F-aOE8H53CKA5TqsV7U";
+        const CAMERA_ENTITY = "camera.192_168_2_67"; // Replace with your camera entity
 
-let ws, ready = false, isPlaying = false, isRecording = false;
-const toggleBtn = document.getElementById('toggleBtn');
-const cameraIcon = document.getElementById('cameraIcon');
-const cameraModal = document.getElementById('cameraModal');
-const closeModal = document.getElementById('closeModal');
-const cameraPreview = document.getElementById('cameraPreview');
-const cameraPlaceholder = document.getElementById('cameraPlaceholder');
-const cameraImage = document.getElementById('cameraImage');
-const loadingSpinner = document.getElementById('loadingSpinner');
-const cameraStatus = document.getElementById('cameraStatus');
-const timestamp = document.getElementById('timestamp');
-const cameraInfo = document.getElementById('cameraInfo');
-const playBtn = document.getElementById('playBtn');
-const pauseBtn = document.getElementById('pauseBtn');
-const snapshotBtn = document.getElementById('snapshotBtn');
-const recordBtn = document.getElementById('recordBtn');
-const fullscreenBtn = document.getElementById('fullscreenBtn');
+        let ws, ready = false, isPlaying = false, isRecording = false;
+        let messageId = 1;
+        let cameraPicturePath = "";
 
-let refreshInterval;
-let streamUrl = "";
+        const toggleBtn = document.getElementById('toggleBtn');
+        const cameraIcon = document.getElementById('cameraIcon');
+        const cameraModal = document.getElementById('cameraModal');
+        const closeModal = document.getElementById('closeModal');
+        const cameraPreview = document.getElementById('cameraPreview');
+        const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+        const cameraImage = document.getElementById('cameraImage');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const cameraStatus = document.getElementById('cameraStatus');
+        const timestamp = document.getElementById('timestamp');
+        const cameraInfo = document.getElementById('cameraInfo');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const snapshotBtn = document.getElementById('snapshotBtn');
+        const recordBtn = document.getElementById('recordBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
 
-// Make the button draggable
-function makeButtonDraggable(btn) {
-    let isDrag = false, startX, startY, origX, origY;
+        let refreshInterval;
+        let baseUrl = "";
 
-    btn.addEventListener("mousedown", e => {
-        isDrag = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        origX = btn.offsetLeft;
-        origY = btn.offsetTop;
-        btn.style.cursor = "grabbing";
-        e.stopPropagation();
-    });
+        // Make the button draggable
+        function makeButtonDraggable(btn) {
+            let isDrag = false, startX, startY, origX, origY;
 
-    window.addEventListener("mousemove", e => {
-        if (!isDrag) return;
-        let dx = e.clientX - startX;
-        let dy = e.clientY - startY;
-        btn.style.left = (origX + dx) + "px";
-        btn.style.top = (origY + dy) + "px";
-    });
+            btn.addEventListener("mousedown", e => {
+                isDrag = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                origX = btn.offsetLeft;
+                origY = btn.offsetTop;
+                btn.style.cursor = "grabbing";
+                e.stopPropagation();
+            });
 
-    window.addEventListener("mouseup", () => {
-        isDrag = false;
-        btn.style.cursor = "grab";
-    });
-}
+            window.addEventListener("mousemove", e => {
+                if (!isDrag) return;
+                let dx = e.clientX - startX;
+                let dy = e.clientY - startY;
+                btn.style.left = (origX + dx) + "px";
+                btn.style.top = (origY + dy) + "px";
+            });
 
-// Connect to WebSocket
-function connectWebSocket() {
-    ws = new WebSocket(WS_URL);
+            window.addEventListener("mouseup", () => {
+                isDrag = false;
+                btn.style.cursor = "grab";
+            });
+        }
 
-    ws.onopen = () => {
-        console.log("WebSocket connected");
-        ws.send(JSON.stringify({ type: "auth", access_token: TOKEN }));
-    };
+        // Connect to WebSocket
+        function connectWebSocket() {
+            ws = new WebSocket(WS_URL);
 
-    ws.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        console.log("Message received:", data);
+            ws.onopen = () => {
+                console.log("WebSocket connected");
+                ws.send(JSON.stringify({ type: "auth", access_token: TOKEN }));
+            };
 
-        if (data.type === "auth_ok") {
-            console.log("Authentication successful");
-            ready = true;
-            toggleBtn.disabled = false;
-            
-            // Get camera stream URL when authenticated
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                console.log("WebSocket message:", data);
+
+                if (data.type === "auth_ok") {
+                    console.log("Authentication successful");
+                    ready = true;
+                    toggleBtn.disabled = false;
+
+                    // Get camera states when authenticated
+                    setTimeout(() => {
+                        getCameraState();
+                    }, 100);
+                }
+                else if (data.type === "result" && data.success && data.result) {
+                    // Handle camera state response
+                    if (Array.isArray(data.result)) {
+                        const camera = data.result.find(e => e.entity_id === CAMERA_ENTITY);
+                        if (camera) {
+                            console.log("Camera found:", camera);
+                            // Extract base URL from camera attributes
+                            if (camera.attributes?.entity_picture) {
+                                cameraPicturePath = camera.attributes.entity_picture;
+                                console.log("Camera picture path:", cameraPicturePath);
+                            }
+
+                        }
+                    }
+                }
+                else if (data.type === "event" && data.event?.event_type === "state_changed") {
+                    if (data.event.data.entity_id === CAMERA_ENTITY) {
+                        console.log("Camera state changed:", data.event.data.new_state);
+                        // Update UI based on new state
+                    }
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error("WebSocket error:", error);
+                toggleBtn.disabled = true;
+                updateCameraStatus("Connection Error");
+            };
+
+            ws.onclose = () => {
+                console.log("WebSocket disconnected");
+                toggleBtn.disabled = true;
+                ready = false;
+                updateCameraStatus("Disconnected");
+                stopCameraStream();
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+
+        // Extract base URL from entity picture
+        function extractBaseUrl(entityPicture) {
+            if (!entityPicture) return "";
+
+            // Remove the /api/camera_proxy/... part to get base URL
+            const match = entityPicture.match(/^(https?:\/\/[^\/]+)/);
+            return match ? match[1] : "";
+        }
+
+        // Get camera state
+        function getCameraState() {
+            if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
+                console.log("Not ready to get camera state");
+                return;
+            }
+
+            ws.send(JSON.stringify({
+                id: messageId++,
+                type: "get_states"
+            }));
+        }
+
+        function getCameraSnapshot() {
+            if (!cameraPicturePath) {
+                console.error("Camera picture path not available");
+                updateCameraStatus("Camera not ready");
+                return;
+            }
+
+            const snapshotUrl = `${cameraPicturePath}&_t=${Date.now()}`;
+
+            loadingSpinner.style.display = 'block';
+
+            fetch(snapshotUrl, {
+                headers: {
+                    Authorization: `Bearer ${TOKEN}`
+                }
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error(res.status);
+                    return res.blob();
+                })
+                .then(blob => {
+                    const imgUrl = URL.createObjectURL(blob);
+
+                    cameraPlaceholder.style.display = "none";
+                    cameraImage.style.display = "block";
+                    cameraImage.src = imgUrl;
+
+                    timestamp.textContent = new Date().toLocaleTimeString();
+                    updateCameraStatus("Live");
+                })
+                .catch(err => {
+                    console.error("Snapshot error:", err);
+                    updateCameraStatus("Camera error");
+
+                    cameraPlaceholder.style.display = "flex";
+                    cameraImage.style.display = "none";
+                })
+                .finally(() => {
+                    loadingSpinner.style.display = "none";
+                });
+        }
+
+        // Start camera stream
+        function startCameraStream() {
+            if (!baseUrl) {
+                console.error("No base URL available for camera");
+                updateCameraStatus("Camera not available");
+                return;
+            }
+
+            stopCameraStream();
+
+            loadingSpinner.style.display = 'block';
+            updateCameraStatus("Loading stream...");
+
+            // Get initial snapshot
+            getCameraSnapshot();
+
+            // Start refreshing the snapshot every 2 seconds
+            refreshInterval = setInterval(() => {
+                if (isPlaying) {
+                    getCameraSnapshot();
+                }
+            }, 2000);
+
+            isPlaying = true;
+            updateControlButtons();
+        }
+
+        // Stop camera stream
+        function stopCameraStream() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+
+            isPlaying = false;
+            updateControlButtons();
+            loadingSpinner.style.display = 'none';
+
+            if (!cameraImage.src) {
+                cameraPlaceholder.style.display = 'flex';
+                cameraImage.style.display = 'none';
+            }
+        }
+
+        // Update camera status
+        function updateCameraStatus(status) {
+            cameraStatus.textContent = status;
+        }
+
+        // Update control buttons state
+        function updateControlButtons() {
+            if (isPlaying) {
+                playBtn.classList.remove('active');
+                pauseBtn.classList.add('active');
+            } else {
+                playBtn.classList.add('active');
+                pauseBtn.classList.remove('active');
+            }
+
+            if (isRecording) {
+                recordBtn.classList.add('active');
+                recordBtn.innerHTML = '<i class="fas fa-square"></i>';
+            } else {
+                recordBtn.classList.remove('active');
+                recordBtn.innerHTML = '<i class="fas fa-circle"></i>';
+            }
+        }
+
+        // Open camera modal
+        function openCameraModal() {
+            cameraModal.style.display = 'flex';
+            toggleBtn.classList.add('active');
+
+            // If we don't have base URL yet, get camera state
+            if (!baseUrl) {
+                getCameraState();
+            }
+
+            // Start the stream when modal opens
             setTimeout(() => {
-                getCameraStream();
-            }, 100);
+                startCameraStream();
+            }, 500);
         }
-        else if (data.type === "result" && data.id === 10) {
-            if (data.success && data.result) {
-                // Camera stream URL received
-                streamUrl = data.result;
-                console.log("Camera stream URL:", streamUrl);
-                updateCameraStatus("Connected");
+
+        // Close camera modal
+        function closeCameraModal() {
+            cameraModal.style.display = 'none';
+            toggleBtn.classList.remove('active');
+            stopCameraStream();
+        }
+
+        // Toggle recording
+        function toggleRecording() {
+            isRecording = !isRecording;
+            updateControlButtons();
+
+            if (isRecording) {
+                cameraStatus.textContent = "Recording...";
+                console.log("Recording started");
+            } else {
+                cameraStatus.textContent = "Live";
+                console.log("Recording stopped");
             }
         }
-        else if (data.type === "result" && data.id === 11) {
-            // Snapshot received
-            if (data.success && data.result) {
-                showSnapshot(data.result);
+
+        // Take snapshot handler
+        function takeSnapshotHandler() {
+            // Refresh the image
+            getCameraSnapshot();
+
+            // Show feedback
+            snapshotBtn.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                snapshotBtn.innerHTML = '<i class="fas fa-camera"></i>';
+            }, 1000);
+        }
+
+        // Toggle fullscreen
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                cameraPreview.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+                fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+                }
             }
         }
-    };
 
-    ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        toggleBtn.disabled = true;
-        updateCameraStatus("Connection Error");
-    };
+        // Event Listeners
+        toggleBtn.addEventListener('click', openCameraModal);
+        closeModal.addEventListener('click', closeCameraModal);
 
-    ws.onclose = () => {
-        console.log("WebSocket disconnected");
-        toggleBtn.disabled = true;
-        ready = false;
-        updateCameraStatus("Disconnected");
-        stopCameraStream();
-        setTimeout(connectWebSocket, 3000);
-    };
-}
+        playBtn.addEventListener('click', startCameraStream);
+        pauseBtn.addEventListener('click', stopCameraStream);
+        snapshotBtn.addEventListener('click', takeSnapshotHandler);
+        recordBtn.addEventListener('click', toggleRecording);
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
 
-// Get camera stream URL
-function getCameraStream() {
-    if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
-        console.log("Not ready to get camera stream");
-        return;
-    }
-
-    // Request camera stream URL
-    ws.send(JSON.stringify({
-        id: 10,
-        type: "camera/stream",
-        entity_id: CAMERA_ENTITY
-    }));
-    
-    updateCameraStatus("Requesting stream...");
-}
-
-// Take snapshot
-function takeSnapshot() {
-    if (!ready || !ws || ws.readyState !== WebSocket.OPEN) {
-        console.log("Not ready to take snapshot");
-        return;
-    }
-
-    loadingSpinner.style.display = 'block';
-    
-    ws.send(JSON.stringify({
-        id: 11,
-        type: "camera/snapshot",
-        entity_id: CAMERA_ENTITY
-    }));
-}
-
-// Show snapshot image
-function showSnapshot(imageData) {
-    loadingSpinner.style.display = 'none';
-    cameraPlaceholder.style.display = 'none';
-    cameraImage.style.display = 'block';
-    cameraImage.src = "data:image/jpeg;base64," + imageData;
-    
-    // Update timestamp
-    const now = new Date();
-    timestamp.textContent = now.toLocaleTimeString();
-}
-
-// Start camera stream
-function startCameraStream() {
-    if (!streamUrl) {
-        console.log("No stream URL available");
-        updateCameraStatus("No stream URL");
-        return;
-    }
-
-    stopCameraStream();
-    
-    loadingSpinner.style.display = 'block';
-    updateCameraStatus("Loading stream...");
-    
-    // Start refreshing the snapshot every 2 seconds
-    refreshInterval = setInterval(() => {
-        takeSnapshot();
-    }, 2000);
-    
-    isPlaying = true;
-    updateControlButtons();
-    cameraStatus.textContent = "Streaming";
-}
-
-// Stop camera stream
-function stopCameraStream() {
-    if (refreshInterval) {
-        clearInterval(refreshInterval);
-        refreshInterval = null;
-    }
-    
-    isPlaying = false;
-    updateControlButtons();
-    loadingSpinner.style.display = 'none';
-    
-    if (!cameraImage.src.includes("data:image")) {
-        cameraPlaceholder.style.display = 'flex';
-        cameraImage.style.display = 'none';
-    }
-}
-
-// Update camera status
-function updateCameraStatus(status) {
-    cameraStatus.textContent = status;
-}
-
-// Update control buttons state
-function updateControlButtons() {
-    if (isPlaying) {
-        playBtn.classList.remove('active');
-        pauseBtn.classList.add('active');
-    } else {
-        playBtn.classList.add('active');
-        pauseBtn.classList.remove('active');
-    }
-    
-    if (isRecording) {
-        recordBtn.classList.add('active');
-        recordBtn.innerHTML = '<i class="fas fa-square"></i>';
-    } else {
-        recordBtn.classList.remove('active');
-        recordBtn.innerHTML = '<i class="fas fa-circle"></i>';
-    }
-}
-
-// Open camera modal
-function openCameraModal() {
-    cameraModal.style.display = 'flex';
-    toggleBtn.classList.add('active');
-    
-    // Start the stream when modal opens
-    setTimeout(() => {
-        startCameraStream();
-    }, 500);
-}
-
-// Close camera modal
-function closeCameraModal() {
-    cameraModal.style.display = 'none';
-    toggleBtn.classList.remove('active');
-    stopCameraStream();
-}
-
-// Toggle recording
-function toggleRecording() {
-    isRecording = !isRecording;
-    updateControlButtons();
-    
-    if (isRecording) {
-        cameraStatus.textContent = "Recording...";
-        // In a real implementation, you would start recording here
-        console.log("Recording started");
-    } else {
-        cameraStatus.textContent = "Streaming";
-        // Stop recording
-        console.log("Recording stopped");
-    }
-}
-
-// Take snapshot
-function takeSnapshotHandler() {
-    takeSnapshot();
-    // Show feedback
-    snapshotBtn.innerHTML = '<i class="fas fa-check"></i>';
-    setTimeout(() => {
-        snapshotBtn.innerHTML = '<i class="fas fa-camera"></i>';
-    }, 1000);
-}
-
-// Toggle fullscreen
-function toggleFullscreen() {
-    if (!document.fullscreenElement) {
-        cameraPreview.requestFullscreen().catch(err => {
-            console.log(`Error attempting to enable fullscreen: ${err.message}`);
+        // Close modal when clicking outside
+        cameraModal.addEventListener('click', (e) => {
+            if (e.target === cameraModal) {
+                closeCameraModal();
+            }
         });
-        fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
-    } else {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-            fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
-        }
-    }
-}
 
-// Event Listeners
-toggleBtn.addEventListener('click', openCameraModal);
-closeModal.addEventListener('click', closeCameraModal);
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && cameraModal.style.display === 'flex') {
+                closeCameraModal();
+            }
+        });
 
-playBtn.addEventListener('click', startCameraStream);
-pauseBtn.addEventListener('click', stopCameraStream);
-snapshotBtn.addEventListener('click', takeSnapshotHandler);
-recordBtn.addEventListener('click', toggleRecording);
-fullscreenBtn.addEventListener('click', toggleFullscreen);
+        // Update timestamp every second
+        setInterval(() => {
+            if (cameraModal.style.display === 'flex' && timestamp.textContent) {
+                const now = new Date();
+                timestamp.textContent = now.toLocaleTimeString();
+            }
+        }, 1000);
 
-// Close modal when clicking outside
-cameraModal.addEventListener('click', (e) => {
-    if (e.target === cameraModal) {
-        closeCameraModal();
-    }
-});
+        // Initialize
+        makeButtonDraggable(toggleBtn);
+        connectWebSocket();
 
-// Close modal with Escape key
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && cameraModal.style.display === 'flex') {
-        closeCameraModal();
-    }
-});
-
-// Update timestamp every second
-setInterval(() => {
-    if (cameraModal.style.display === 'flex' && timestamp.textContent) {
-        const now = new Date();
-        timestamp.textContent = now.toLocaleTimeString();
-    }
-}, 1000);
-
-// Initialize
-makeButtonDraggable(toggleBtn);
-connectWebSocket();
-
-// Handle fullscreen change
-document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement) {
-        fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
-    }
-});
-</script>
+        // Handle fullscreen change
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+            }
+        });
+    </script>
 </body>
+
 </html>

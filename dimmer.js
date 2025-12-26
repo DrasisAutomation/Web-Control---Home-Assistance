@@ -470,30 +470,30 @@ window.DimmerModule = (function () {
     // Show edit modal for dimmer
     function showEditModal(config) {
         console.log('Dimmer: Opening edit modal for:', config.id, 'type: dimmer');
-        
+
         // Mark button as selected
         if (window.selectButtonForEdit) {
             window.selectButtonForEdit(config.id, 'dimmer');
         }
-        
+
         // Fill the edit form
         const editEntityId = document.getElementById('editEntityId');
         const editName = document.getElementById('editName');
         const editIcon = document.getElementById('editIcon');
-        
+
         if (editEntityId) editEntityId.value = config.entityId || '';
         if (editName) editName.value = config.name || 'Dimmer';
         if (editIcon) editIcon.value = config.iconClass || 'dimmer.svg';
-        
+
         // Store which button we're editing
         window.currentEditingButton = config.id;
         window.currentEditingType = 'dimmer';
-        
+
         // Also set in buttons module
         if (window.buttons && window.buttons.setEditingButtonId) {
             window.buttons.setEditingButtonId(config.id);
         }
-        
+
         // Show modal
         const modal = document.getElementById('buttonEditModal');
         if (modal) {
@@ -625,6 +625,43 @@ window.DimmerModule = (function () {
                 const value = parseInt(e.target.value);
                 updateBrightness(value);
             });
+
+            // FIXED TOUCH EVENTS for brightness slider (Dimmer)
+            brightnessSlider.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                const touch = e.touches[0];
+                const rect = brightnessSlider.getBoundingClientRect();
+                const relativeY = touch.clientY - rect.top;
+                const percent = relativeY / rect.height;
+                const value = Math.round((1 - percent) * 100); // INVERT HERE
+                const clampedValue = Math.max(0, Math.min(100, value));
+
+                brightnessSlider.value = clampedValue;
+                if (brightnessValue) {
+                    brightnessValue.textContent = `${clampedValue}%`;
+                }
+            }, { passive: false });
+
+            brightnessSlider.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const touch = e.touches[0];
+                const rect = brightnessSlider.getBoundingClientRect();
+                const relativeY = touch.clientY - rect.top;
+                const percent = relativeY / rect.height;
+                const value = Math.round((1 - percent) * 100); // INVERT HERE
+                const clampedValue = Math.max(0, Math.min(100, value));
+
+                brightnessSlider.value = clampedValue;
+                if (brightnessValue) {
+                    brightnessValue.textContent = `${clampedValue}%`;
+                }
+            }, { passive: false });
+
+            brightnessSlider.addEventListener('touchend', (e) => {
+                const value = parseInt(brightnessSlider.value);
+                updateBrightness(value);
+            }, { passive: true });
         }
     }
 

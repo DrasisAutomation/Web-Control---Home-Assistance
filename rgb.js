@@ -377,7 +377,7 @@ window.RGBModule = (function () {
             hue: rgb.hue || 180,
             isOn: rgb.isOn || false
         }));
-        
+
         localStorage.setItem('rgbButtons', JSON.stringify(cleanRGBs));
     }
 
@@ -472,7 +472,7 @@ window.RGBModule = (function () {
         let startY = 0;
         let startLeft = 0;
         let startTop = 0;
-        
+
         // Mouse down handler
         button.addEventListener('mousedown', (e) => {
             if (!isEditMode) {
@@ -505,11 +505,11 @@ window.RGBModule = (function () {
                 // Check if we haven't moved much
                 const movedX = Math.abs(e.clientX - startX);
                 const movedY = Math.abs(e.clientY - startY);
-                
+
                 if (movedX < dragThreshold && movedY < dragThreshold && !isDragging) {
                     showEditModal(config);
                 }
-                
+
                 longPressTimer = null;
             }, 600);
 
@@ -517,13 +517,13 @@ window.RGBModule = (function () {
             const mouseMoveHandler = (moveEvent) => {
                 const moveX = Math.abs(moveEvent.clientX - startX);
                 const moveY = Math.abs(moveEvent.clientY - startY);
-                
+
                 // If movement exceeds threshold, start dragging
                 if ((moveX > dragThreshold || moveY > dragThreshold) && longPressTimer) {
                     clearTimeout(longPressTimer);
                     longPressTimer = null;
                     startDrag(moveEvent, button, config);
-                    
+
                     // Remove this listener
                     document.removeEventListener('mousemove', mouseMoveHandler);
                 }
@@ -583,7 +583,7 @@ window.RGBModule = (function () {
             const touch = e.touches[0];
             const moveX = Math.abs(touch.clientX - startX);
             const moveY = Math.abs(touch.clientY - startY);
-            
+
             // If movement exceeds threshold, start dragging
             if (moveX > dragThreshold || moveY > dragThreshold) {
                 if (longPressTimer) {
@@ -592,7 +592,7 @@ window.RGBModule = (function () {
                 }
                 startDrag(e, button, config);
             }
-            
+
             e.preventDefault();
         });
 
@@ -604,7 +604,7 @@ window.RGBModule = (function () {
                     showEditModal(config);
                     longPressTimer = null;
                 }
-                
+
                 if (isDragging) {
                     stopDrag();
                 }
@@ -626,7 +626,7 @@ window.RGBModule = (function () {
 
         const startDragX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
         const startDragY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-        
+
         const originalLeft = parseFloat(button.style.left);
         const originalTop = parseFloat(button.style.top);
 
@@ -693,13 +693,13 @@ window.RGBModule = (function () {
     // Stop dragging
     function stopDrag() {
         isDragging = false;
-        
+
         // Clear selection when drag ends
         if (currentRGB) {
             const btn = document.getElementById(currentRGB.id);
             if (btn) btn.classList.remove('selected');
         }
-        
+
         // Reset all RGB buttons cursor
         rgbButtons.forEach(config => {
             const btn = document.getElementById(config.id);
@@ -713,30 +713,30 @@ window.RGBModule = (function () {
     // Show edit modal for RGB
     function showEditModal(config) {
         console.log('RGB: Opening edit modal for:', config.id, 'type: rgb');
-        
+
         // Mark button as selected
         if (window.selectButtonForEdit) {
             window.selectButtonForEdit(config.id, 'rgb');
         }
-        
+
         // Fill the edit form
         const editEntityId = document.getElementById('editEntityId');
         const editName = document.getElementById('editName');
         const editIcon = document.getElementById('editIcon');
-        
+
         if (editEntityId) editEntityId.value = config.entityId || '';
         if (editName) editName.value = config.name || 'RGB Light';
         if (editIcon) editIcon.value = config.iconClass || 'light-bulb-1.svg';
-        
+
         // Store which button we're editing
         window.currentEditingButton = config.id;
         window.currentEditingType = 'rgb';
-        
+
         // Also set in buttons module
         if (window.buttons && window.buttons.setEditingButtonId) {
             window.buttons.setEditingButtonId(config.id);
         }
-        
+
         // Show modal
         const modal = document.getElementById('buttonEditModal');
         if (modal) {
@@ -897,6 +897,43 @@ window.RGBModule = (function () {
                 const value = parseInt(e.target.value);
                 updateBrightness(value);
             });
+
+            // FIXED TOUCH EVENTS for brightness slider (RGB)
+            brightnessSlider.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                const touch = e.touches[0];
+                const rect = brightnessSlider.getBoundingClientRect();
+                const relativeY = touch.clientY - rect.top;
+                const percent = relativeY / rect.height;
+                const value = Math.round((1 - percent) * 100); // INVERT HERE
+                const clampedValue = Math.max(0, Math.min(100, value));
+
+                brightnessSlider.value = clampedValue;
+                if (brightnessValue) {
+                    brightnessValue.textContent = `${clampedValue}%`;
+                }
+            }, { passive: false });
+
+            brightnessSlider.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const touch = e.touches[0];
+                const rect = brightnessSlider.getBoundingClientRect();
+                const relativeY = touch.clientY - rect.top;
+                const percent = relativeY / rect.height;
+                const value = Math.round((1 - percent) * 100); // INVERT HERE
+                const clampedValue = Math.max(0, Math.min(100, value));
+
+                brightnessSlider.value = clampedValue;
+                if (brightnessValue) {
+                    brightnessValue.textContent = `${clampedValue}%`;
+                }
+            }, { passive: false });
+
+            brightnessSlider.addEventListener('touchend', (e) => {
+                const value = parseInt(brightnessSlider.value);
+                updateBrightness(value);
+            }, { passive: true });
         }
 
         // Color slider - update when released
@@ -905,6 +942,54 @@ window.RGBModule = (function () {
                 const value = parseInt(e.target.value);
                 updateColor(value);
             });
+
+            // Add input event for real-time display updates
+            colorSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                // You might want to update a color display here
+                if (window.updateColorDisplay) {
+                    window.updateColorDisplay(value);
+                }
+            });
+
+            // FIXED TOUCH EVENTS for color slider (RGB)
+            colorSlider.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                const touch = e.touches[0];
+                const rect = colorSlider.getBoundingClientRect();
+                const relativeY = touch.clientY - rect.top;
+                const percent = relativeY / rect.height;
+                const value = Math.round((1 - percent) * 360); // INVERT HERE (0-360 range)
+                const clampedValue = Math.max(0, Math.min(360, value));
+
+                colorSlider.value = clampedValue;
+                // Update color display if function exists
+                if (window.updateColorDisplay) {
+                    window.updateColorDisplay(clampedValue);
+                }
+            }, { passive: false });
+
+            colorSlider.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const touch = e.touches[0];
+                const rect = colorSlider.getBoundingClientRect();
+                const relativeY = touch.clientY - rect.top;
+                const percent = relativeY / rect.height;
+                const value = Math.round((1 - percent) * 360); // INVERT HERE (0-360 range)
+                const clampedValue = Math.max(0, Math.min(360, value));
+
+                colorSlider.value = clampedValue;
+                // Update color display if function exists
+                if (window.updateColorDisplay) {
+                    window.updateColorDisplay(clampedValue);
+                }
+            }, { passive: false });
+
+            colorSlider.addEventListener('touchend', (e) => {
+                const value = parseInt(colorSlider.value);
+                updateColor(value);
+            }, { passive: true });
         }
     }
 
