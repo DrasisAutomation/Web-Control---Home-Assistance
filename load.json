@@ -162,7 +162,7 @@
           "text": "New Button",
           "entityType": "remote",
           "textColor": "#000000",
-          "bgColor": "#ffffff",
+          "bgColor": "#000000",
           "entityId": "remote.sheild",
           "service": "remote.send_command",
           "command": "DPAD_RIGHT"
@@ -172,7 +172,7 @@
           "text": "New Button",
           "entityType": "remote",
           "textColor": "#000000",
-          "bgColor": "#ffffff",
+          "bgColor": "#000000",
           "entityId": "remote.sheild",
           "service": "remote.send_command",
           "command": "DPAD_RIGHT"
