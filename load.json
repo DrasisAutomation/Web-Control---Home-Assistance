@@ -1,6 +1,6 @@
 {
   "meta": {
-    "savedAt": "2025-12-24T11:37:35.149Z",
+    "savedAt": "2025-12-26T06:21:36.700Z",
     "version": "2.0",
     "totalButtons": 12
   },
@@ -92,7 +92,7 @@
         "x": 0.3601,
         "y": 0.556
       },
-      "brightness": 100,
+      "brightness": 50,
       "temperature": 50
     },
     {
@@ -105,7 +105,7 @@
         "x": 0.2231,
         "y": 0.3552
       },
-      "brightness": 100,
+      "brightness": 50,
       "hue": 180
     },
     {
@@ -176,6 +176,186 @@
           "entityId": "remote.sheild",
           "service": "remote.send_command",
           "command": "DPAD_RIGHT"
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "switch",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "czxc",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "switch",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "zccx",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "switch",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "zxczx",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "switch",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "c",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "switch",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "c",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "switch",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "cc",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "switch",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "c",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "switch",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "cc",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "switch",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "cc",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "switch",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "cc",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "switch",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "cc",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "switch",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "cc",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.sheild",
+          "service": "remote.turn_off",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.sheild",
+          "service": "remote.turn_off",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.sheild",
+          "service": "remote.turn_off",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.sheild",
+          "service": "remote.turn_off",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.sheild",
+          "service": "remote.turn_off",
+          "command": ""
+        },
+        {
+          "icon": "power.svg",
+          "text": "New Button",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.sheild",
+          "service": "remote.turn_off",
+          "command": ""
         }
       ]
     }
