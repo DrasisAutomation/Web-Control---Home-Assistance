@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Camera Control - Video Stream</title>
+    <title>Camera Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* Center the button */
@@ -142,14 +143,6 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            display: none;
-        }
-
-        .camera-preview-video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: none;
         }
 
         .camera-placeholder {
@@ -277,50 +270,36 @@
             }
         }
 
-        /* Stream quality selector */
-        .stream-quality {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 10px;
-            width: 100%;
-        }
-
-        .quality-btn {
-            background: rgba(0, 0, 0, 0.1);
-            border: 1px solid #ddd;
-            border-radius: 15px;
-            padding: 5px 15px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 12px;
-            color: #333;
-        }
-
-        .quality-btn:hover {
-            background: rgba(66, 133, 244, 0.1);
-        }
-
-        .quality-btn.active {
-            background: rgba(66, 133, 244, 0.3);
-            border-color: #4285f4;
-            color: #4285f4;
-        }
-
-        /* Error message */
-        .error-message {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+        /* Debug info panel */
+        .debug-panel {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
             background: rgba(0, 0, 0, 0.8);
             color: white;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            z-index: 4;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-family: monospace;
+            z-index: 9999;
+            max-width: 300px;
+            max-height: 200px;
+            overflow-y: auto;
             display: none;
-            max-width: 80%;
+        }
+
+        .debug-toggle {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            z-index: 10000;
+            font-size: 12px;
         }
     </style>
 </head>
@@ -332,16 +311,15 @@
     <!-- Camera Modal -->
     <div class="modal-overlay" id="cameraModal">
         <div class="modal-content">
-            <div class="modal-title-text">Camera Live Stream</div>
+            <div class="modal-title-text">Camera Preview</div>
             <button class="close-modal" id="closeModal">&times;</button>
 
             <div class="camera-preview-container" id="cameraPreview">
                 <div class="camera-placeholder" id="cameraPlaceholder">
                     <i class="fas fa-video"></i>
-                    <span>Loading video stream...</span>
+                    <span>Camera feed will appear here</span>
                 </div>
-                <img class="camera-preview" id="cameraImage" alt="Camera Feed">
-                <video class="camera-preview-video" id="cameraVideo" playsinline autoplay muted></video>
+                <img class="camera-preview" id="cameraImage" style="display: none;" alt="Camera Feed">
                 
                 <div class="loading-spinner" id="loadingSpinner">
                     <i class="fas fa-spinner"></i>
@@ -349,18 +327,7 @@
                 
                 <div class="camera-status" id="cameraStatus">Connecting...</div>
                 <div class="timestamp" id="timestamp"></div>
-                <div class="camera-info" id="cameraInfo">Live Stream</div>
-                
-                <div class="error-message" id="errorMessage">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 10px;"></i>
-                    <p id="errorText"></p>
-                    <button class="quality-btn" onclick="tryAlternativeStream()" style="margin-top: 10px;">Try Alternative Method</button>
-                </div>
-            </div>
-
-            <div class="stream-quality" id="streamQuality">
-                <button class="quality-btn active" data-quality="stream">Video Stream</button>
-                <button class="quality-btn" data-quality="snapshot">Snapshot Mode</button>
+                <div class="camera-info" id="cameraInfo">HD • 30fps</div>
             </div>
 
             <div class="camera-controls">
@@ -379,9 +346,6 @@
                 <button class="camera-btn" id="fullscreenBtn" title="Fullscreen">
                     <i class="fas fa-expand"></i>
                 </button>
-                <button class="camera-btn" id="refreshBtn" title="Refresh Stream">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
             </div>
         </div>
     </div>
@@ -389,17 +353,18 @@
     <script>
         // WebSocket configuration
         const WS_URL = "wss://demo.lumihomepro1.com/api/websocket";
+        
+        // IMPORTANT: When served from Home Assistant, we can get the token differently
+        // Option A: If served from HA, we can potentially get the auth token
+        // Option B: Keep using your long-lived token
         const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzNGNlNThiNDk1Nzk0NDVmYjUxNzE2NDA0N2Q0MGNmZCIsImlhdCI6MTc2NTM0NzQ5MSwiZXhwIjoyMDgwNzA3NDkxfQ.Se5PGwx0U9aqyVRnD1uwvCv3F-aOE8H53CKA5TqsV7U";
+        
         const CAMERA_ENTITY = "camera.192_168_2_67";
         const HOME_ASSISTANT_BASE_URL = "https://demo.lumihomepro1.com";
 
         let ws, ready = false, isPlaying = false, isRecording = false;
         let messageId = 1;
         let cameraPicturePath = "";
-        let cameraStreamUrl = "";
-        let currentStreamType = "stream"; // "stream" or "snapshot"
-        let mediaRecorder = null;
-        let recordedChunks = [];
 
         const toggleBtn = document.getElementById('toggleBtn');
         const cameraIcon = document.getElementById('cameraIcon');
@@ -408,7 +373,6 @@
         const cameraPreview = document.getElementById('cameraPreview');
         const cameraPlaceholder = document.getElementById('cameraPlaceholder');
         const cameraImage = document.getElementById('cameraImage');
-        const cameraVideo = document.getElementById('cameraVideo');
         const loadingSpinner = document.getElementById('loadingSpinner');
         const cameraStatus = document.getElementById('cameraStatus');
         const timestamp = document.getElementById('timestamp');
@@ -418,12 +382,14 @@
         const snapshotBtn = document.getElementById('snapshotBtn');
         const recordBtn = document.getElementById('recordBtn');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
-        const refreshBtn = document.getElementById('refreshBtn');
-        const errorMessage = document.getElementById('errorMessage');
-        const errorText = document.getElementById('errorText');
-        const streamQuality = document.getElementById('streamQuality');
 
         let refreshInterval;
+
+        // Check if we're running from Home Assistant
+        function isRunningFromHA() {
+            return window.location.hostname === 'demo.lumihomepro1.com' || 
+                   window.location.pathname.includes('/local/');
+        }
 
         // Make the button draggable
         function makeButtonDraggable(btn) {
@@ -486,29 +452,21 @@
                         if (camera) {
                             console.log("Camera found:", camera.entity_id);
                             
-                            // Extract camera picture path for snapshots
+                            // Extract camera picture path
                             if (camera.attributes?.entity_picture) {
                                 cameraPicturePath = camera.attributes.entity_picture;
                                 console.log("Camera picture path:", cameraPicturePath);
                                 
+                                // Check if we need to make it absolute
                                 if (cameraPicturePath.startsWith('/')) {
                                     cameraPicturePath = HOME_ASSISTANT_BASE_URL + cameraPicturePath;
+                                    console.log("Converted to absolute path:", cameraPicturePath);
                                 }
-                            }
-                            
-                            // Try to get stream URL
-                            if (camera.attributes?.stream_source) {
-                                cameraStreamUrl = camera.attributes.stream_source;
-                                console.log("Stream source found:", cameraStreamUrl);
-                            } else {
-                                // Try to construct stream URL
-                                cameraStreamUrl = `${HOME_ASSISTANT_BASE_URL}/api/hls/${camera.entity_id}/playlist.m3u8?token=${TOKEN}`;
-                                console.log("Constructed stream URL:", cameraStreamUrl);
-                            }
-                            
-                            // Update camera info
-                            if (camera.attributes?.friendly_name) {
-                                cameraInfo.textContent = camera.attributes.friendly_name;
+                                
+                                // Update camera info
+                                if (camera.attributes?.friendly_name) {
+                                    cameraInfo.textContent = camera.attributes.friendly_name;
+                                }
                             }
                             
                             // If modal is open, start the stream
@@ -516,6 +474,11 @@
                                 setTimeout(startCameraStream, 500);
                             }
                         }
+                    }
+                }
+                else if (data.type === "event" && data.event?.event_type === "state_changed") {
+                    if (data.event.data.entity_id === CAMERA_ENTITY) {
+                        console.log("Camera state changed");
                     }
                 }
             };
@@ -532,7 +495,7 @@
                 ready = false;
                 updateCameraStatus("Disconnected");
                 stopCameraStream();
-                setTimeout(connectWebSocket, 3000);
+                setTimeout(connectWebSocket, 1000);
             };
         }
 
@@ -550,215 +513,85 @@
             }));
         }
 
-        // Get camera snapshot (fallback method)
+        // Get camera snapshot using IMG element (avoids CORS issues with fetch)
         function getCameraSnapshot() {
             if (!cameraPicturePath) {
-                showError("Camera picture path not available");
+                console.error("Camera picture path not available");
+                updateCameraStatus("Camera not ready");
                 return;
             }
 
-            const snapshotUrl = `${cameraPicturePath}&_t=${Date.now()}`;
+            // Add timestamp to prevent caching
+            const timestampParam = Date.now();
+            const snapshotUrl = `${cameraPicturePath}&_t=${timestampParam}`;
             console.log("Loading snapshot from:", snapshotUrl);
+
+            loadingSpinner.style.display = 'block';
+            updateCameraStatus("Loading...");
 
             // Create a new image element
             const newImage = new Image();
             
             newImage.onload = () => {
-                console.log("Snapshot loaded successfully");
+                console.log("Image loaded successfully");
+                
                 cameraPlaceholder.style.display = "none";
                 cameraImage.style.display = "block";
-                cameraVideo.style.display = "none";
                 cameraImage.src = newImage.src;
+                
                 timestamp.textContent = new Date().toLocaleTimeString();
-                updateCameraStatus("Live Snapshot");
-                hideError();
+                updateCameraStatus("Live");
+                loadingSpinner.style.display = "none";
             };
             
             newImage.onerror = (err) => {
-                console.error("Error loading snapshot:", err);
-                showError("Failed to load snapshot");
+                console.error("Error loading image:", err);
+                updateCameraStatus("Failed to load image");
+                loadingSpinner.style.display = "none";
+                
+                // Show placeholder
+                cameraPlaceholder.style.display = "flex";
+                cameraImage.style.display = "none";
             };
             
+            // Set the source - the browser will handle the request
+            // If served from HA, this should work without CORS issues
             newImage.src = snapshotUrl;
+            
+            // Add authorization via query parameter (already in the URL)
+            // The token is already in the entity_picture URL from HA
         }
 
-        // Start video stream
+        // Start camera stream
         function startCameraStream() {
+            if (!cameraPicturePath) {
+                console.error("No camera picture path available");
+                updateCameraStatus("Camera not available");
+                
+                // Try to get camera state again
+                if (ready) {
+                    getCameraState();
+                }
+                return;
+            }
+
             stopCameraStream();
-            
-            if (currentStreamType === "snapshot") {
-                // Use snapshot mode
-                getCameraSnapshot();
-                refreshInterval = setInterval(() => {
-                    if (isPlaying) {
-                        getCameraSnapshot();
-                    }
-                }, 1000); // 1 second refresh
-                isPlaying = true;
-                updateControlButtons();
-                return;
-            }
-            
-            // Try video stream
-            if (!cameraStreamUrl) {
-                showError("No stream URL available. Trying snapshot mode...");
-                currentStreamType = "snapshot";
-                updateQualityButtons();
-                startCameraStream();
-                return;
-            }
 
-            console.log("Starting video stream from:", cameraStreamUrl);
             loadingSpinner.style.display = 'block';
-            updateCameraStatus("Starting video stream...");
+            updateCameraStatus("Loading stream...");
 
-            // Try HLS stream first (most common for HA cameras)
-            if (cameraStreamUrl.includes('.m3u8')) {
-                // Try to use hls.js for HLS streams
-                if (typeof Hls !== 'undefined') {
-                    startHlsStream();
-                } else {
-                    // Load hls.js library
-                    loadHlsLibrary();
+            // Get initial snapshot
+            getCameraSnapshot();
+
+            // Start refreshing the snapshot every 3 seconds
+            refreshInterval = setInterval(() => {
+                if (isPlaying) {
+                    getCameraSnapshot();
                 }
-            } else {
-                // Try direct video stream
-                startDirectVideoStream();
-            }
-        }
+            }, 3000);
 
-        // Load HLS library
-        function loadHlsLibrary() {
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
-            script.onload = startHlsStream;
-            script.onerror = () => {
-                console.error("Failed to load HLS.js");
-                showError("HLS library failed to load. Trying direct stream...");
-                startDirectVideoStream();
-            };
-            document.head.appendChild(script);
-        }
-
-        // Start HLS stream
-        function startHlsStream() {
-            if (typeof Hls === 'undefined') {
-                showError("HLS.js not available");
-                return;
-            }
-
-            if (Hls.isSupported()) {
-                const hls = new Hls({
-                    enableWorker: true,
-                    lowLatencyMode: true,
-                    backBufferLength: 90
-                });
-                
-                hls.loadSource(cameraStreamUrl);
-                hls.attachMedia(cameraVideo);
-                
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    console.log("HLS manifest parsed, starting playback");
-                    cameraPlaceholder.style.display = "none";
-                    cameraImage.style.display = "none";
-                    cameraVideo.style.display = "block";
-                    loadingSpinner.style.display = "none";
-                    cameraVideo.play();
-                    updateCameraStatus("Live Video Stream");
-                    hideError();
-                    isPlaying = true;
-                    updateControlButtons();
-                });
-                
-                hls.on(Hls.Events.ERROR, (event, data) => {
-                    console.error("HLS error:", data);
-                    if (data.fatal) {
-                        showError("HLS stream error. Trying direct stream...");
-                        startDirectVideoStream();
-                    }
-                });
-                
-                // Store reference for cleanup
-                window.hlsInstance = hls;
-            } else if (cameraVideo.canPlayType('application/vnd.apple.mpegurl')) {
-                // Native HLS support (Safari)
-                cameraVideo.src = cameraStreamUrl;
-                cameraVideo.addEventListener('loadedmetadata', () => {
-                    cameraPlaceholder.style.display = "none";
-                    cameraImage.style.display = "none";
-                    cameraVideo.style.display = "block";
-                    loadingSpinner.style.display = "none";
-                    cameraVideo.play();
-                    updateCameraStatus("Live Video Stream");
-                    hideError();
-                    isPlaying = true;
-                    updateControlButtons();
-                });
-            } else {
-                showError("Browser doesn't support HLS. Trying snapshot mode...");
-                currentStreamType = "snapshot";
-                updateQualityButtons();
-                startCameraStream();
-            }
-        }
-
-        // Start direct video stream
-        function startDirectVideoStream() {
-            console.log("Trying direct video stream");
-            
-            // Try different stream formats
-            const streamUrls = [
-                cameraStreamUrl,
-                `${HOME_ASSISTANT_BASE_URL}/api/camera_proxy_stream/${CAMERA_ENTITY}?token=${TOKEN}`,
-                `${HOME_ASSISTANT_BASE_URL}/api/camera_proxy_stream/camera.${CAMERA_ENTITY.split('.')[1]}?token=${TOKEN}`
-            ];
-            
-            let currentUrlIndex = 0;
-            
-            function tryNextStream() {
-                if (currentUrlIndex >= streamUrls.length) {
-                    showError("All stream methods failed. Switching to snapshot mode.");
-                    currentStreamType = "snapshot";
-                    updateQualityButtons();
-                    startCameraStream();
-                    return;
-                }
-                
-                const url = streamUrls[currentUrlIndex];
-                console.log("Trying stream URL:", url);
-                
-                cameraVideo.src = url;
-                cameraVideo.load();
-                
-                cameraVideo.onloadeddata = () => {
-                    console.log("Direct stream loaded successfully");
-                    cameraPlaceholder.style.display = "none";
-                    cameraImage.style.display = "none";
-                    cameraVideo.style.display = "block";
-                    loadingSpinner.style.display = "none";
-                    cameraVideo.play();
-                    updateCameraStatus("Live Video Stream");
-                    hideError();
-                    isPlaying = true;
-                    updateControlButtons();
-                };
-                
-                cameraVideo.onerror = () => {
-                    console.error("Failed to load stream URL:", url);
-                    currentUrlIndex++;
-                    tryNextStream();
-                };
-                
-                // Timeout
-                setTimeout(() => {
-                    if (!isPlaying) {
-                        currentUrlIndex++;
-                        tryNextStream();
-                    }
-                }, 5000);
-            }
-            
-            tryNextStream();
+            isPlaying = true;
+            updateControlButtons();
         }
 
         // Stop camera stream
@@ -767,31 +600,10 @@
                 clearInterval(refreshInterval);
                 refreshInterval = null;
             }
-            
-            if (window.hlsInstance) {
-                window.hlsInstance.destroy();
-                window.hlsInstance = null;
-            }
-            
-            if (cameraVideo) {
-                cameraVideo.pause();
-                cameraVideo.src = "";
-            }
-            
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
-            
+
             isPlaying = false;
-            isRecording = false;
             updateControlButtons();
             loadingSpinner.style.display = 'none';
-            
-            if (!cameraImage.src && !cameraVideo.src) {
-                cameraPlaceholder.style.display = 'flex';
-                cameraImage.style.display = 'none';
-                cameraVideo.style.display = 'none';
-            }
         }
 
         // Update camera status
@@ -818,52 +630,20 @@
             }
         }
 
-        // Update quality buttons
-        function updateQualityButtons() {
-            const buttons = streamQuality.querySelectorAll('.quality-btn');
-            buttons.forEach(btn => {
-                if (btn.dataset.quality === currentStreamType) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
-            });
-        }
-
-        // Show error message
-        function showError(message) {
-            errorText.textContent = message;
-            errorMessage.style.display = 'block';
-            console.error("Camera Error:", message);
-        }
-
-        // Hide error message
-        function hideError() {
-            errorMessage.style.display = 'none';
-        }
-
-        // Try alternative stream method
-        function tryAlternativeStream() {
-            hideError();
-            if (currentStreamType === "stream") {
-                currentStreamType = "snapshot";
-            } else {
-                currentStreamType = "stream";
-            }
-            updateQualityButtons();
-            startCameraStream();
-        }
-
         // Open camera modal
         function openCameraModal() {
             cameraModal.style.display = 'flex';
             toggleBtn.classList.add('active');
 
+            console.log("Opening camera modal");
+
+            // If we're not ready, try to connect
             if (!ready) {
                 connectWebSocket();
-            } else if (!cameraStreamUrl && !cameraPicturePath) {
+            } else if (!cameraPicturePath) {
                 getCameraState();
             } else {
+                // Start the stream immediately
                 setTimeout(startCameraStream, 100);
             }
         }
@@ -873,105 +653,48 @@
             cameraModal.style.display = 'none';
             toggleBtn.classList.remove('active');
             stopCameraStream();
+            console.log("Camera modal closed");
         }
 
         // Toggle recording
         function toggleRecording() {
-            if (!isPlaying) return;
-            
-            if (!isRecording) {
-                // Start recording
-                recordedChunks = [];
-                try {
-                    const stream = cameraVideo.captureStream ? cameraVideo.captureStream(30) : null;
-                    if (stream) {
-                        mediaRecorder = new MediaRecorder(stream);
-                        mediaRecorder.ondataavailable = (e) => {
-                            if (e.data.size > 0) {
-                                recordedChunks.push(e.data);
-                            }
-                        };
-                        mediaRecorder.onstop = () => {
-                            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `recording-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
-                            a.click();
-                            URL.revokeObjectURL(url);
-                        };
-                        mediaRecorder.start();
-                        isRecording = true;
-                        updateControlButtons();
-                        cameraStatus.textContent = "Recording...";
-                    } else {
-                        alert("Recording not supported in this browser");
-                    }
-                } catch (e) {
-                    console.error("Recording error:", e);
-                    alert("Recording failed: " + e.message);
-                }
+            isRecording = !isRecording;
+            updateControlButtons();
+
+            if (isRecording) {
+                cameraStatus.textContent = "Recording...";
+                console.log("Recording started");
             } else {
-                // Stop recording
-                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                    mediaRecorder.stop();
-                }
-                isRecording = false;
-                updateControlButtons();
                 cameraStatus.textContent = "Live";
+                console.log("Recording stopped");
             }
         }
 
-        // Take snapshot from video
+        // Take snapshot handler
         function takeSnapshotHandler() {
-            if (currentStreamType === "stream" && cameraVideo.src) {
-                // Capture from video
-                const canvas = document.createElement('canvas');
-                canvas.width = cameraVideo.videoWidth;
-                canvas.height = cameraVideo.videoHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(cameraVideo, 0, 0);
-                
-                const dataUrl = canvas.toDataURL('image/png');
-                const a = document.createElement('a');
-                a.href = dataUrl;
-                a.download = `snapshot-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.png`;
-                a.click();
-                
-                // Show feedback
-                snapshotBtn.innerHTML = '<i class="fas fa-check"></i>';
-                setTimeout(() => {
-                    snapshotBtn.innerHTML = '<i class="fas fa-camera"></i>';
-                }, 1000);
-            } else {
-                // Refresh snapshot
-                getCameraSnapshot();
-            }
+            // Refresh the image
+            getCameraSnapshot();
+
+            // Show feedback
+            snapshotBtn.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                snapshotBtn.innerHTML = '<i class="fas fa-camera"></i>';
+            }, 3000);
         }
 
         // Toggle fullscreen
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
                 cameraPreview.requestFullscreen().catch(err => {
-                    console.log(`Fullscreen error: ${err.message}`);
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
                 });
                 fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
             } else {
-                document.exitFullscreen();
-                fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+                }
             }
-        }
-
-        // Refresh stream
-        function refreshStream() {
-            stopCameraStream();
-            setTimeout(startCameraStream, 100);
-            
-            // Show feedback
-            refreshBtn.innerHTML = '<i class="fas fa-check"></i>';
-            setTimeout(() => {
-                refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
-            }, 1000);
         }
 
         // Event Listeners
@@ -982,19 +705,6 @@
         snapshotBtn.addEventListener('click', takeSnapshotHandler);
         recordBtn.addEventListener('click', toggleRecording);
         fullscreenBtn.addEventListener('click', toggleFullscreen);
-        refreshBtn.addEventListener('click', refreshStream);
-
-        // Quality selector
-        streamQuality.addEventListener('click', (e) => {
-            if (e.target.classList.contains('quality-btn')) {
-                const quality = e.target.dataset.quality;
-                if (quality !== currentStreamType) {
-                    currentStreamType = quality;
-                    updateQualityButtons();
-                    startCameraStream();
-                }
-            }
-        });
 
         // Close modal when clicking outside
         cameraModal.addEventListener('click', (e) => {
@@ -1012,35 +722,11 @@
 
         // Update timestamp every second
         setInterval(() => {
-            if (cameraModal.style.display === 'flex') {
+            if (cameraModal.style.display === 'flex' && timestamp.textContent) {
                 const now = new Date();
                 timestamp.textContent = now.toLocaleTimeString();
             }
-        }, 1000);
-
-        // Video error handling
-        cameraVideo.addEventListener('error', (e) => {
-            console.error("Video element error:", e);
-            if (currentStreamType === "stream") {
-                showError("Video stream error. Trying snapshot mode...");
-                currentStreamType = "snapshot";
-                updateQualityButtons();
-                startCameraStream();
-            }
-        });
-
-        // Video play event
-        cameraVideo.addEventListener('play', () => {
-            isPlaying = true;
-            updateControlButtons();
-            hideError();
-        });
-
-        // Video pause event
-        cameraVideo.addEventListener('pause', () => {
-            isPlaying = false;
-            updateControlButtons();
-        });
+        }, 3000);
 
         // Initialize
         makeButtonDraggable(toggleBtn);

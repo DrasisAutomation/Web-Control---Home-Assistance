@@ -1,12 +1,12 @@
-// remote.js - Complete Remote Control Module (Mobile Scroll Fixed)
+// remote.js - Complete Remote Control Module (Enhanced)
 window.RemoteModule = (() => {
+  // Internal state
   let remoteButtons = []
   let currentRemote = null
   let remoteModal = null
   let remoteEditModal = null
   let remoteGrid = null
   let callbacks = {}
-  let bodyScrollY = 0
   let isEditMode = false
   let isDragging = false
   let longPressTimer = null
@@ -149,63 +149,61 @@ window.RemoteModule = (() => {
         cursor: grabbing;
       }
 
-      /* Fixed modal scroll for mobile */
-      .remote-control-modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-        justify-content: center;
-        align-items: center;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 20px 10px;
-        box-sizing: border-box;
-      }
+      /* Remote Control Modal Styles - MOBILE FIXED */
+.remote-control-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 10px;
+  box-sizing: border-box;
+}
 
-      .remote-control-content {
-        background-color: rgba(255, 255, 255, var(--dimmer-content-opacity, 0.95));
-        border-radius: 15px;
-        width: 100%;
-        max-width: 450px;
-        max-height: 90vh;
-        overflow-y: auto;
-        padding: 25px;
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin: auto;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        box-sizing: border-box;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior: contain;
+.remote-control-content {
+  background-color: rgba(255, 255, 255, var(--dimmer-content-opacity, 0.95));
+  border-radius: 15px;
+  width: 100%;
+  max-width: 450px;
+  max-height: 90vh; /* Limit max height */
+  overflow: hidden; /* Change from auto to hidden - prevent overall scroll */
+  padding: 25px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+}
+
+      /* Except for buttons */
+      .remote-control-btn,
+      .remote-icon-option,
+      .remote-btn {
+        touch-action: manipulation;
       }
 
       /* Mobile-specific styles */
       @media (max-width: 768px) {
         .remote-control-modal {
           padding: 10px 5px;
+          align-items: flex-start; /* Align to top for mobile */
         }
         
         .remote-control-content {
-          max-height: 85vh;
+          max-height: 85vh; /* Slightly less on mobile to account for browser UI */
           padding: 20px 15px;
-          margin: auto;
+          margin: 0 auto;
           width: 95%;
           -webkit-overflow-scrolling: touch;
           overscroll-behavior: contain;
-          scrollbar-width: none;
+          scrollbar-width: none; /* Firefox */
         }
-        
-        .remote-control-content::-webkit-scrollbar {
-          display: none;
-        }
-        
+
         .remote-grid {
           gap: 10px;
           margin: 15px 0;
@@ -230,6 +228,12 @@ window.RemoteModule = (() => {
           -webkit-overflow-scrolling: touch;
           overscroll-behavior: contain;
           overflow-y: auto;
+          touch-action: pan-y;
+        }
+        
+        /* Prevent zoom on double tap */
+        .remote-control-btn {
+          touch-action: manipulation;
         }
       }
 
@@ -262,6 +266,7 @@ window.RemoteModule = (() => {
         }
       }
 
+      /* Fix for iOS Safari */
       @supports (-webkit-touch-callout: none) {
         .remote-control-content {
           max-height: -webkit-fill-available;
@@ -291,6 +296,7 @@ window.RemoteModule = (() => {
         background-color: rgba(0, 0, 0, 0.1);
       }
 
+      /* Edit button in header */
       .remote-edit-button {
         position: absolute;
         top: 15px;
@@ -313,6 +319,7 @@ window.RemoteModule = (() => {
         background-color: rgba(0, 122, 255, 0.1);
       }
 
+      /* Remote Control Styles */
       .remote-container {
         width: 100%;
         display: flex;
@@ -327,7 +334,7 @@ window.RemoteModule = (() => {
         margin-bottom: 10px;
         font-family: Arial, sans-serif;
         text-align: center;
-        word-break: break-word;
+        word-break: break-word; /* Prevent long titles from breaking layout */
       }
 
       .remote-subtitle {
@@ -339,16 +346,22 @@ window.RemoteModule = (() => {
         display: none;
         word-break: break-word;
       }
+.remote-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    width: 100%;
+    max-width: 350px;
+    margin: 20px auto;
+    overflow-y: auto;
+    max-height: calc(90vh - 200px);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-right: 5px;
+    /* Allow vertical scrolling with swipe on mobile */
+    touch-action: pan-y;
+}
 
-      .remote-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        grid-template-rows: repeat(auto-fit, minmax(70px, 1fr));
-        gap: 15px;
-        width: 100%;
-        max-width: 350px;
-        margin: 20px auto;
-      }
 
       .remote-control-btn {
         background: linear-gradient(145deg, #ffffff, #ffffff);
@@ -363,11 +376,11 @@ window.RemoteModule = (() => {
         justify-content: center;
         align-items: center;
         cursor: pointer;
+        touch-action: manipulation;
         transition: all 0.2s ease;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         position: relative;
         overflow: hidden;
-        touch-action: manipulation;
       }
 
       .remote-control-btn:hover {
@@ -425,11 +438,15 @@ window.RemoteModule = (() => {
         white-space: nowrap;
       }
 
+      /* Edit Form Styles */
       .remote-edit-form {
         width: 100%;
         display: none;
         overflow-y: auto;
-        max-height: calc(90vh - 150px);
+        max-height: calc(90vh - 150px); /* Ensure form doesn't overflow modal */
+        /* Allow touch scrolling in edit form */
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
       }
 
       .remote-form-group {
@@ -453,7 +470,7 @@ window.RemoteModule = (() => {
         border-radius: 5px;
         font-size: 14px;
         box-sizing: border-box;
-        -webkit-appearance: none;
+        -webkit-appearance: none; /* Remove default iOS styling */
         -moz-appearance: none;
         appearance: none;
       }
@@ -464,6 +481,7 @@ window.RemoteModule = (() => {
         border-color: #007aff;
       }
 
+      /* Style for select dropdown on mobile */
       .remote-form-select {
         background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000000'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
         background-repeat: no-repeat;
@@ -551,7 +569,8 @@ window.RemoteModule = (() => {
         cursor: pointer;
         transition: all 0.2s ease;
         flex: 1;
-        min-height: 44px;
+        min-height: 44px; /* Minimum touch target size for mobile */
+        touch-action: manipulation;
       }
 
       .remote-btn-primary {
@@ -581,19 +600,21 @@ window.RemoteModule = (() => {
         background: linear-gradient(145deg, #ff5c52, #ff3b30);
       }
 
-      .remote-icon-grid {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 10px;
-        max-height: 200px;
-        overflow-y: auto;
-        padding: 10px;
-        background: rgba(0, 0, 0, 0.05);
-        border-radius: 10px;
-        margin-top: 10px;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior: contain;
-      }
+.remote-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  max-height: 200px;
+  overflow-y: auto; /* Make icon grid scrollable too */
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  margin-top: 10px;
+  -webkit-overflow-scrolling: touch;
+  /* Allow vertical scrolling in icon grid on mobile */
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
 
       .remote-icon-option {
         width: 40px;
@@ -633,6 +654,7 @@ window.RemoteModule = (() => {
         fill: white;
       }
 
+      /* Delete confirmation */
       .remote-delete-confirmation {
         text-align: center;
         padding: 20px;
@@ -645,6 +667,7 @@ window.RemoteModule = (() => {
         font-size: 16px;
       }
 
+      /* Empty state */
       .remote-empty-state {
         grid-column: 1 / -1;
         text-align: center;
@@ -661,6 +684,7 @@ window.RemoteModule = (() => {
         fill: #666;
       }
 
+      /* Force color override for all SVG elements */
       .remote-control-btn svg,
       .remote-control-btn svg *,
       .remote-button-preview-icon svg,
@@ -670,14 +694,84 @@ window.RemoteModule = (() => {
         fill: currentColor !important;
       }
 
+      /* Selected icon should be white */
       .remote-icon-option.selected svg,
       .remote-icon-option.selected svg * {
         fill: white !important;
       }
+
+      /* Prevent body scroll when modal is open */
+      body.modal-open {
+        overflow: hidden;
+      }
+
+      /* Added for overall modal scrolling */
+      .remote-control-content,
+      .remote-icon-grid,
+      .remote-edit-form {
+        touch-action: pan-y;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Mobile-specific changes */
+      @media (max-width: 768px) {
+        .remote-control-modal {
+          padding: 10px 5px;
+          align-items: center;
+        }
+        
+        .remote-control-content {
+          max-height: 85vh;
+          padding: 20px 15px;
+          margin: 0 auto;
+          width: 95%;
+          overflow: hidden; /* Keep content non-scrollable */
+        }
+        
+        .remote-grid {
+          max-height: calc(85vh - 160px); /* Adjust for mobile */
+          overflow-y: auto; /* Grid scrollable */
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior: contain;
+        }
+        
+        /* Style the scrollbar */
+        .remote-grid::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .remote-grid::-webkit-scrollbar-thumb {
+          background-color: rgba(0, 0, 0, 0.2);
+          border-radius: 3px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .remote-control-content {
+          padding: 15px 10px;
+          max-height: 80vh;
+        }
+        
+        .remote-grid {
+          max-height: calc(80vh - 140px); /* Adjust for smaller screens */
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+        }
+        
+        .remote-control-btn {
+          height: 60px;
+          font-size: 15px;
+        }
+      }
+      .remote-control-btn:active,
+    .remote-control-btn:hover {
+        touch-action: pan-y;
+    }
     `
     document.head.appendChild(style)
   }
 
+  // Create remote modal HTML (with edit capabilities)
   function createModal() {
     if (document.getElementById("remoteControlModal")) return
 
@@ -798,6 +892,7 @@ window.RemoteModule = (() => {
     `
     document.body.insertAdjacentHTML("beforeend", modalHTML)
 
+    // Get references
     remoteModal = document.getElementById("remoteControlModal")
     remoteGrid = document.getElementById("remoteControlGrid")
     remoteEditModal = {
@@ -823,6 +918,7 @@ window.RemoteModule = (() => {
     }
   }
 
+  // Load SVG content
   async function loadSVG(svgName) {
     if (svgCache.has(svgName)) {
       return svgCache.get(svgName)
@@ -841,6 +937,7 @@ window.RemoteModule = (() => {
     }
   }
 
+  // Create SVG element from content
   function createSVGFromContent(svgContent, color = "currentColor", size = 32) {
     const container = document.createElement("div")
     container.innerHTML = svgContent
@@ -870,12 +967,22 @@ window.RemoteModule = (() => {
     return fallback
   }
 
+  // Initialize the module
   function init(cb) {
     callbacks = cb || {}
+
+    // Inject styles
     injectStyles()
+
+    // Create modal
     createModal()
+
+    // Setup event listeners
     setupEventListeners()
+
+    // Load saved remote buttons
     loadFromLocalStorage()
+
     console.log("Remote module initialized with full features")
     return {
       create,
@@ -889,6 +996,7 @@ window.RemoteModule = (() => {
     }
   }
 
+  // Load from localStorage
   function loadFromLocalStorage() {
     const saved = localStorage.getItem("remoteButtons")
     if (saved) {
@@ -902,6 +1010,7 @@ window.RemoteModule = (() => {
     }
   }
 
+  // Save to localStorage
   function saveToLocalStorage() {
     const cleanRemotes = remoteButtons.map((remote) => ({
       id: remote.id,
@@ -919,11 +1028,13 @@ window.RemoteModule = (() => {
     localStorage.setItem("remoteButtons", JSON.stringify(cleanRemotes))
   }
 
+  // Create a remote button - WITH PROMPT FOR ENTITY ID
   function create(config) {
     if (!config.id) {
       config.id = "remote_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9)
     }
 
+    // Prompt for entity ID if not provided
     if (!config.entityId) {
       const entityId = prompt("Enter Entity ID for Remote:", "")
       if (!entityId || !entityId.trim()) {
@@ -933,25 +1044,34 @@ window.RemoteModule = (() => {
       config.entityId = entityId.trim()
     }
 
+    // Prompt for name if not provided
     if (!config.name) {
       const name = prompt("Enter name for Remote (optional):", "Remote") || "Remote"
       config.name = name
     }
 
+    // Set defaults
     config.type = "remote"
     config.iconClass = config.iconClass || "remote.svg"
     config.name = config.name || "Remote"
     config.remoteConfig = config.remoteConfig || []
     config.position = config.position || { x: 0.5, y: 0.5 }
 
+    // Add to array
     remoteButtons.push(config)
+
+    // Create DOM element
     createRemoteButton(config)
+
+    // Save
     saveToLocalStorage()
 
     return config.id
   }
 
+  // Create remote button DOM element
   function createRemoteButton(config) {
+    // Remove existing if present
     const existing = document.getElementById(config.id)
     if (existing) existing.remove()
 
@@ -963,23 +1083,30 @@ window.RemoteModule = (() => {
     button.dataset.icon = config.iconClass || "remote.svg"
     button.title = config.name || "Remote"
 
+    // Create icon container
     button.innerHTML = `<div class="icon"></div>`
 
+    // Set SVG icon
     if (window.SVGIcons) {
       window.SVGIcons.setIconImmediately(button, config.iconClass || "remote.svg")
     }
 
+    // Add event listeners
     setupRemoteButtonEvents(button, config)
 
+    // Append to pan layer
     const panLayer = document.getElementById("panLayer")
     if (panLayer) {
       panLayer.appendChild(button)
+
+      // Position button
       updateButtonPosition(button, config.position)
     }
 
     return button
   }
 
+  // Update button position
   function updateButtonPosition(button, position) {
     const img = document.getElementById("viewImage")
     if (img && position) {
@@ -991,12 +1118,14 @@ window.RemoteModule = (() => {
     }
   }
 
+  // Setup remote button events
   function setupRemoteButtonEvents(button, config) {
     let startX = 0
     let startY = 0
     let startLeft = 0
     let startTop = 0
 
+    // Mouse down handler for drag/long press
     button.addEventListener("mousedown", (e) => {
       if (!isEditMode) {
         e.stopPropagation()
@@ -1014,11 +1143,13 @@ window.RemoteModule = (() => {
       startLeft = Number.parseFloat(button.style.left) || rect.left
       startTop = Number.parseFloat(button.style.top) || rect.top
 
+      // Clear existing timer
       if (longPressTimer) {
         clearTimeout(longPressTimer)
         longPressTimer = null
       }
 
+      // Start long press timer (for edit modal)
       longPressTimer = setTimeout(() => {
         const movedX = Math.abs(e.clientX - startX)
         const movedY = Math.abs(e.clientY - startY)
@@ -1030,6 +1161,7 @@ window.RemoteModule = (() => {
         longPressTimer = null
       }, 600)
 
+      // Mouse move to detect drag
       const mouseMoveHandler = (moveEvent) => {
         const moveX = Math.abs(moveEvent.clientX - startX)
         const moveY = Math.abs(moveEvent.clientY - startY)
@@ -1044,6 +1176,7 @@ window.RemoteModule = (() => {
 
       document.addEventListener("mousemove", mouseMoveHandler)
 
+      // Cleanup
       const cleanup = () => {
         if (longPressTimer) {
           clearTimeout(longPressTimer)
@@ -1056,6 +1189,7 @@ window.RemoteModule = (() => {
       document.addEventListener("mouseup", cleanup)
     })
 
+    // Click handler (non-edit mode only) - opens remote modal
     button.addEventListener("click", (e) => {
       if (isEditMode) {
         e.stopPropagation()
@@ -1070,6 +1204,7 @@ window.RemoteModule = (() => {
       }
     })
 
+    // Touch events for mobile
     button.addEventListener(
       "touchstart",
       (e) => {
@@ -1084,6 +1219,7 @@ window.RemoteModule = (() => {
         startTop = Number.parseFloat(button.style.top) || rect.top
 
         e.stopPropagation()
+        // ❌ DO NOT preventDefault
       },
       { passive: true },
     )
@@ -1104,6 +1240,8 @@ window.RemoteModule = (() => {
           }
           startDrag(e, button, config)
         }
+
+        // ❌ DO NOT preventDefault
       },
       { passive: true },
     )
@@ -1122,12 +1260,14 @@ window.RemoteModule = (() => {
       }
     })
 
+    // Prevent context menu in edit mode
     button.addEventListener("contextmenu", (e) => {
       if (isEditMode) e.preventDefault()
       return false
     })
   }
 
+  // Start dragging
   function startDrag(e, button, config) {
     isDragging = true
     button.classList.add("dragging")
@@ -1143,8 +1283,8 @@ window.RemoteModule = (() => {
     const dragMoveHandler = (moveEvent) => {
       if (!isDragging) return
 
-      const clientX = moveEvent.touches[0].clientX
-      const clientY = moveEvent.touches[0].clientY
+      const clientX = moveEvent.type.includes("touch") ? moveEvent.touches[0].clientX : moveEvent.clientX
+      const clientY = moveEvent.type.includes("touch") ? moveEvent.touches[0].clientY : moveEvent.clientY
 
       const deltaX = clientX - startDragX
       const deltaY = clientY - startDragY
@@ -1163,6 +1303,7 @@ window.RemoteModule = (() => {
       button.style.cursor = "grab"
       currentDraggingButton = null
 
+      // Calculate and save new position
       const img = document.getElementById("viewImage")
       if (img) {
         const imgRect = img.getBoundingClientRect()
@@ -1182,17 +1323,18 @@ window.RemoteModule = (() => {
       }
 
       document.removeEventListener("mousemove", dragMoveHandler)
+      document.removeEventListener("touchmove", dragMoveHandler)
       document.removeEventListener("mouseup", dragEndHandler)
       document.removeEventListener("touchend", dragEndHandler)
     }
 
     document.addEventListener("mousemove", dragMoveHandler)
-    button.addEventListener("touchmove", dragMoveHandler, { passive: false })
-
+    document.addEventListener("touchmove", dragMoveHandler, { passive: false })
     document.addEventListener("mouseup", dragEndHandler)
     document.addEventListener("touchend", dragEndHandler)
   }
 
+  // Stop dragging
   function stopDrag() {
     isDragging = false
     currentDraggingButton = null
@@ -1206,27 +1348,35 @@ window.RemoteModule = (() => {
     })
   }
 
+  // Open remote edit modal (for configuring remote buttons)
   function openRemoteEditModal(config) {
     console.log("Opening remote edit modal for:", config.id)
 
+    // Select this button for editing
     if (window.selectButtonForEdit) {
       window.selectButtonForEdit(config.id, "remote")
     }
 
+    // Store current remote
     currentRemote = config
 
+    // Update modal title
     document.getElementById("remoteControlTitle").textContent = "Edit Remote"
     document.getElementById("remoteControlSubtitle").textContent = "Configure remote buttons"
 
+    // Hide grid, show edit form
     document.getElementById("remoteControlGrid").style.display = "none"
     remoteEditModal.form.style.display = "block"
 
+    // Populate icon grid if not already done
     if (remoteEditModal.iconGrid.children.length === 0) {
       populateIconGrid()
     }
 
+    // Reset form for new remote button configuration
     resetRemoteEditForm()
 
+    // Update edit button icon to X
     const editBtn = document.getElementById("remoteEditBtn")
     const editBtnIcon = editBtn.querySelector("svg")
     editBtnIcon.innerHTML = ""
@@ -1238,26 +1388,26 @@ window.RemoteModule = (() => {
     editBtnIcon.appendChild(path)
     editBtn.title = "Close Edit Mode"
 
+    // Show the modal
     remoteModal.style.display = "flex"
   }
 
+  // Open remote control modal (for using the remote)
   async function openRemoteModal(config) {
-    bodyScrollY = window.scrollY
-    document.body.style.position = "fixed"
-    document.body.style.top = `-${bodyScrollY}px`
-    document.body.style.width = "100%"
-
     console.log("Opening remote control for:", config.name)
 
     currentRemote = config
 
+    // Update modal title
     document.getElementById("remoteControlTitle").textContent = config.name || "Remote Control"
     document.getElementById("remoteControlSubtitle").textContent = config.entityId || "Smart Controller"
 
+    // Show grid, hide edit form
     document.getElementById("remoteControlGrid").style.display = "grid"
     remoteEditModal.form.style.display = "none"
     document.getElementById("remoteDeleteConfirmation").style.display = "none"
 
+    // Reset edit button icon
     const editBtn = document.getElementById("remoteEditBtn")
     const editBtnIcon = editBtn.querySelector("svg")
     editBtnIcon.innerHTML = ""
@@ -1269,34 +1419,45 @@ window.RemoteModule = (() => {
     editBtnIcon.appendChild(path)
     editBtn.title = "Edit Remote"
 
+    // Render remote control buttons
     await renderRemoteButtons(config)
 
+    // Show modal
     remoteModal.style.display = "flex"
 
+    // Prevent body scrolling
     document.body.classList.add("modal-open")
+
+    // Prevent touch event capture on modal container
+    setTimeout(() => {
+      const content = document.querySelector(".remote-control-content")
+      if (content) {
+        content.style.touchAction = "pan-y"
+      }
+    }, 100)
   }
 
+  // Close remote modal
   function closeRemoteModal() {
     remoteModal.style.display = "none"
     currentRemote = null
     currentEditingRemoteButtonIndex = null
 
+    // Reset to normal view
     document.getElementById("remoteControlGrid").style.display = "grid"
     remoteEditModal.form.style.display = "none"
     document.getElementById("remoteDeleteConfirmation").style.display = "none"
 
+    // Allow body scrolling again
     document.body.classList.remove("modal-open")
-
-    document.body.style.position = ""
-    document.body.style.top = ""
-    document.body.style.width = ""
-    window.scrollTo(0, bodyScrollY)
   }
 
+  // Populate icon grid
   async function populateIconGrid() {
     const grid = remoteEditModal.iconGrid
     grid.innerHTML = ""
 
+    // Load a subset of icons for better performance
     const displayIcons = SVG_ICONS.slice(0, 100)
 
     for (const iconName of displayIcons) {
@@ -1308,6 +1469,7 @@ window.RemoteModule = (() => {
         iconElement.title = iconName
         iconElement.dataset.icon = iconName
 
+        // Create SVG from content
         const svg = createSVGFromContent(svgContent, "#666", 24)
         iconElement.appendChild(svg)
 
@@ -1324,6 +1486,7 @@ window.RemoteModule = (() => {
         grid.appendChild(iconElement)
       } catch (error) {
         console.warn(`Failed to load icon ${iconName}:`, error)
+        // Create a placeholder element
         const iconElement = document.createElement("div")
         iconElement.className = "remote-icon-option"
         iconElement.title = iconName
@@ -1333,6 +1496,7 @@ window.RemoteModule = (() => {
       }
     }
 
+    // Select first icon by default
     setTimeout(() => {
       const firstIcon = grid.querySelector(".remote-icon-option")
       if (firstIcon) {
@@ -1342,15 +1506,17 @@ window.RemoteModule = (() => {
       }
     }, 100)
 
-    console.log("Icon grid populated")
+    console.log("Icon grid populated with", grid.children.length, "icons")
   }
 
+  // Reset remote edit form
   function resetRemoteEditForm() {
     currentEditingRemoteButtonIndex = null
+
     remoteEditModal.iconInput.value = "power.svg"
     remoteEditModal.textInput.value = "New Button"
     remoteEditModal.entityTypeSelect.value = "remote"
-    remoteEditModal.entityIdInput.value = ""
+    remoteEditModal.entityIdInput.value = currentRemote ? currentRemote.entityId : ""
     remoteEditModal.serviceSelect.value = ""
     remoteEditModal.commandInput.value = ""
     remoteEditModal.switchEntityIdInput.value = ""
@@ -1359,10 +1525,16 @@ window.RemoteModule = (() => {
     remoteEditModal.textColorValue.textContent = "#000000"
     remoteEditModal.bgColorValue.textContent = "#ffffff"
 
+    // Hide delete button for new buttons
     remoteEditModal.deleteButton.style.display = "none"
+
+    // Show/hide config sections
     handleRemoteEntityTypeChange()
+
+    // Update preview
     updateRemotePreview()
 
+    // Select first icon in grid
     setTimeout(() => {
       const iconOptions = remoteEditModal.iconGrid.querySelectorAll(".remote-icon-option")
       if (iconOptions.length > 0) {
@@ -1372,18 +1544,22 @@ window.RemoteModule = (() => {
     }, 100)
   }
 
+  // Update remote preview
   async function updateRemotePreview() {
     const iconName = remoteEditModal.iconInput.value.trim()
     const text = remoteEditModal.textInput.value.trim()
     const textColor = remoteEditModal.textColorInput.value
     const bgColor = remoteEditModal.bgColorInput.value
 
+    // Update preview text
     const previewLabel = remoteEditModal.preview.querySelector(".remote-button-preview-label")
     previewLabel.textContent = text || "New Button"
 
+    // Update preview colors
     remoteEditModal.preview.style.color = textColor
     remoteEditModal.preview.style.background = `linear-gradient(145deg, ${bgColor}, ${darkenColor(bgColor, 20)})`
 
+    // Update preview icon
     remoteEditModal.previewIcon.innerHTML = ""
 
     try {
@@ -1395,15 +1571,19 @@ window.RemoteModule = (() => {
     }
   }
 
+  // Handle entity type change
   function handleRemoteEntityTypeChange() {
     const entityType = remoteEditModal.entityTypeSelect.value
 
+    // Show/hide appropriate config sections
     document.getElementById("remoteConfig").style.display = entityType === "remote" ? "block" : "none"
     document.getElementById("switchConfig").style.display = entityType === "switch" ? "block" : "none"
 
+    // Update service change handler
     handleRemoteServiceChange()
   }
 
+  // Handle service change
   function handleRemoteServiceChange() {
     const service = remoteEditModal.serviceSelect.value
     const commandContainer = remoteEditModal.commandContainer
@@ -1413,7 +1593,7 @@ window.RemoteModule = (() => {
       const label = commandContainer.querySelector(".remote-form-label")
       if (service === "remote.send_command") {
         label.textContent = "Command"
-        remoteEditModal.commandInput.placeholder = "HOME, POWER, VOLUME_UP"
+        remoteEditModal.commandInput.placeholder = "power, volume_up, etc."
       } else if (service === "remote.turn_on") {
         label.textContent = "URL / App"
         remoteEditModal.commandInput.placeholder = "https://youtube.com or app id"
@@ -1424,6 +1604,7 @@ window.RemoteModule = (() => {
     }
   }
 
+  // Save remote button configuration
   async function saveRemoteButton() {
     const icon = remoteEditModal.iconInput.value.trim()
     const text = remoteEditModal.textInput.value.trim()
@@ -1435,6 +1616,7 @@ window.RemoteModule = (() => {
     let service = ""
     let command = ""
 
+    // Get entity-specific values
     if (entityType === "remote") {
       entityId = remoteEditModal.entityIdInput.value.trim()
       service = remoteEditModal.serviceSelect.value
@@ -1446,6 +1628,7 @@ window.RemoteModule = (() => {
       service = "switch.toggle"
     }
 
+    // Validation
     if (!text) {
       alert("Please enter button text")
       return
@@ -1466,6 +1649,7 @@ window.RemoteModule = (() => {
       return
     }
 
+    // Verify SVG exists
     if (!SVG_ICONS.includes(icon)) {
       alert("Please select a valid icon from the grid")
       return
@@ -1483,20 +1667,27 @@ window.RemoteModule = (() => {
     }
 
     if (currentRemote) {
+      // Add or update button in current remote's config
       if (currentEditingRemoteButtonIndex !== null) {
+        // Update existing button
         currentRemote.remoteConfig[currentEditingRemoteButtonIndex] = buttonData
       } else {
+        // Add new button
         currentRemote.remoteConfig.push(buttonData)
       }
 
+      // Save to localStorage
       saveToLocalStorage()
 
+      // Re-render buttons
       await renderRemoteButtons(currentRemote)
     }
 
+    // Reset form
     resetRemoteEditForm()
   }
 
+  // Edit existing remote button
   function editRemoteButton(index) {
     console.log("Editing button at index:", index)
 
@@ -1508,13 +1699,16 @@ window.RemoteModule = (() => {
     const button = currentRemote.remoteConfig[index]
     currentEditingRemoteButtonIndex = index
 
+    // Show edit form
     remoteEditModal.form.style.display = "block"
     document.getElementById("remoteControlGrid").style.display = "none"
     document.getElementById("remoteDeleteConfirmation").style.display = "none"
 
+    // Update modal title
     document.getElementById("remoteControlTitle").textContent = "Edit Button"
     document.getElementById("remoteControlSubtitle").textContent = "Modify button settings"
 
+    // Populate form with button data
     remoteEditModal.iconInput.value = button.icon || "power.svg"
     remoteEditModal.textInput.value = button.text || ""
     remoteEditModal.entityTypeSelect.value = button.entityType || "remote"
@@ -1523,6 +1717,7 @@ window.RemoteModule = (() => {
     remoteEditModal.textColorValue.textContent = button.textColor || "#000000"
     remoteEditModal.bgColorValue.textContent = button.bgColor || "#ffffff"
 
+    // Entity specific fields
     if (button.entityType === "remote") {
       remoteEditModal.entityIdInput.value = button.entityId || ""
       remoteEditModal.serviceSelect.value = button.service || ""
@@ -1536,11 +1731,14 @@ window.RemoteModule = (() => {
       remoteEditModal.switchEntityIdInput.value = button.entityId || ""
     }
 
+    // Handle UI updates
     handleRemoteEntityTypeChange()
     updateRemotePreview()
 
+    // Show delete button
     remoteEditModal.deleteButton.style.display = "block"
 
+    // Update edit button icon to X
     const editBtn = document.getElementById("remoteEditBtn")
     const editBtnIcon = editBtn.querySelector("svg")
     editBtnIcon.innerHTML = ""
@@ -1552,19 +1750,24 @@ window.RemoteModule = (() => {
     editBtnIcon.appendChild(path)
     editBtn.title = "Close Edit Mode"
 
+    // Check if icon grid needs to be populated
     if (remoteEditModal.iconGrid.children.length === 0) {
+      // Populate icon grid first, then select the icon
       populateIconGrid().then(() => {
+        // After grid is populated, select the icon
         setTimeout(() => {
           selectIconInGrid(button.icon || "power.svg")
         }, 100)
       })
     } else {
+      // Grid already populated, just select the icon
       setTimeout(() => {
         selectIconInGrid(button.icon || "power.svg")
       }, 100)
     }
   }
 
+  // Helper function to select an icon in the grid
   function selectIconInGrid(iconName) {
     const iconOptions = remoteEditModal.iconGrid.querySelectorAll(".remote-icon-option")
     console.log("Total icon options:", iconOptions.length)
@@ -1582,6 +1785,7 @@ window.RemoteModule = (() => {
     })
 
     if (!found && iconOptions.length > 0) {
+      // If icon not found, select the first one
       iconOptions[0].classList.add("selected")
       remoteEditModal.iconInput.value = iconOptions[0].dataset.icon
       console.log("Icon not found, selecting first one:", iconOptions[0].dataset.icon)
@@ -1589,6 +1793,7 @@ window.RemoteModule = (() => {
     }
   }
 
+  // Delete remote button
   function deleteRemoteButton() {
     if (currentEditingRemoteButtonIndex !== null && currentRemote) {
       currentRemote.remoteConfig.splice(currentEditingRemoteButtonIndex, 1)
@@ -1598,11 +1803,13 @@ window.RemoteModule = (() => {
     }
   }
 
+  // Show delete confirmation
   function showDeleteConfirmation() {
     remoteEditModal.form.style.display = "none"
     document.getElementById("remoteDeleteConfirmation").style.display = "block"
   }
 
+  // Cancel delete
   function cancelDelete() {
     document.getElementById("remoteDeleteConfirmation").style.display = "none"
     if (currentEditingRemoteButtonIndex !== null) {
@@ -1620,9 +1827,11 @@ window.RemoteModule = (() => {
 
     const remoteConfig = config.remoteConfig || []
 
+    // Check if modal exists first
     const emptyState = document.getElementById("remoteEmptyState")
 
     if (remoteConfig.length === 0) {
+      // Create empty state if it doesn't exist
       if (!emptyState) {
         const emptyDiv = document.createElement("div")
         emptyDiv.className = "remote-empty-state"
@@ -1642,10 +1851,12 @@ window.RemoteModule = (() => {
       return
     }
 
+    // Hide empty state if it exists
     if (emptyState) {
       emptyState.style.display = "none"
     }
 
+    // Render all buttons
     for (const [index, btnConfig] of remoteConfig.entries()) {
       const btnElement = document.createElement("button")
       btnElement.className = "remote-control-btn"
@@ -1658,9 +1869,11 @@ window.RemoteModule = (() => {
         btnElement.style.background = `linear-gradient(145deg, ${btnConfig.bgColor}, ${darkenColor(btnConfig.bgColor, 20)})`
       }
 
+      // Create icon container
       const iconContainer = document.createElement("div")
       iconContainer.className = "remote-btn-icon"
 
+      // Load SVG icon
       if (btnConfig.icon) {
         try {
           const svgContent = await loadSVG(btnConfig.icon)
@@ -1671,6 +1884,7 @@ window.RemoteModule = (() => {
         }
       }
 
+      // Create label
       const label = document.createElement("span")
       label.className = "remote-btn-label"
       label.textContent = btnConfig.text || "Button"
@@ -1678,30 +1892,39 @@ window.RemoteModule = (() => {
       btnElement.appendChild(iconContainer)
       btnElement.appendChild(label)
 
-      // SIMPLIFIED TOUCH HANDLING - No interference with scrolling
+      // Add long-press timer variable
       let longPressTimer = null
-      let pressStartTime = 0
+      let touchStartY = 0
+      let touchStartX = 0 // Add touchStartX
+      let isScrolling = false
 
-      // MOUSE EVENTS
-      btnElement.addEventListener("mousedown", (e) => {
-        pressStartTime = Date.now()
-        longPressTimer = setTimeout(() => {
-          editRemoteButton(index)
-          longPressTimer = null
-        }, 700)
-      })
-
-      btnElement.addEventListener("mouseup", () => {
-        const pressDuration = Date.now() - pressStartTime
-        if (longPressTimer) {
-          clearTimeout(longPressTimer)
-          longPressTimer = null
-        }
-        if (pressDuration < 700) {
+      // CLICK → SEND COMMAND (only if not a long press)
+      btnElement.addEventListener("click", (e) => {
+        // If it was a long press, don't send command
+        if (longPressTimer === null && !isScrolling) {
           sendRemoteCommand(btnConfig)
         }
       })
 
+      // MOUSE DOWN → START LONG PRESS TIMER
+      btnElement.addEventListener("mousedown", (e) => {
+        isScrolling = false
+        longPressTimer = setTimeout(() => {
+          // Long press detected - edit button
+          editRemoteButton(index)
+          longPressTimer = null
+        }, 700) // 700ms for long press
+      })
+
+      // MOUSE UP → CANCEL LONG PRESS
+      btnElement.addEventListener("mouseup", () => {
+        if (longPressTimer) {
+          clearTimeout(longPressTimer)
+          longPressTimer = null
+        }
+      })
+
+      // MOUSE LEAVE → CANCEL LONG PRESS
       btnElement.addEventListener("mouseleave", () => {
         if (longPressTimer) {
           clearTimeout(longPressTimer)
@@ -1709,28 +1932,55 @@ window.RemoteModule = (() => {
         }
       })
 
-      // TOUCH EVENTS - Passive to allow scrolling
+      // In renderRemoteButtons function, update the button event listeners:
+
       btnElement.addEventListener(
         "touchstart",
         (e) => {
-          pressStartTime = Date.now()
+          touchStartY = e.touches[0].clientY
+          touchStartX = e.touches[0].clientX
+          isScrolling = false
+
+          // Only start long press timer if we're not trying to scroll
           longPressTimer = setTimeout(() => {
-            editRemoteButton(index)
-            longPressTimer = null
+            if (!isScrolling) {
+              editRemoteButton(index)
+            }
           }, 700)
         },
         { passive: true },
       )
 
       btnElement.addEventListener(
-        "touchend",
+        "touchmove",
         (e) => {
-          const pressDuration = Date.now() - pressStartTime
+          const touchY = e.touches[0].clientY
+          const touchX = e.touches[0].clientX
+          const deltaY = Math.abs(touchY - touchStartY)
+          const deltaX = Math.abs(touchX - touchStartX)
+
+          // If vertical movement is significant, it's likely a scroll
+          if (deltaY > 5 && deltaY > deltaX) {
+            isScrolling = true
+            if (longPressTimer) {
+              clearTimeout(longPressTimer)
+              longPressTimer = null
+            }
+          }
+        },
+        { passive: true },
+      )
+
+      btnElement.addEventListener(
+        "touchend",
+        () => {
           if (longPressTimer) {
             clearTimeout(longPressTimer)
             longPressTimer = null
           }
-          if (pressDuration < 700) {
+
+          // Only send command if it wasn't a scroll
+          if (!isScrolling) {
             sendRemoteCommand(btnConfig)
           }
         },
@@ -1741,6 +1991,7 @@ window.RemoteModule = (() => {
     }
   }
 
+  // Send remote command to Home Assistant
   function sendRemoteCommand(btnConfig) {
     if (!btnConfig.entityId || !btnConfig.service) {
       console.warn("Remote: Missing entityId or service", btnConfig)
@@ -1766,6 +2017,7 @@ window.RemoteModule = (() => {
     console.log("Remote: Sent command", { domain, service, serviceData })
   }
 
+  // Darken color helper
   function darkenColor(color, percent) {
     if (color.startsWith("#")) {
       let r = Number.parseInt(color.slice(1, 3), 16)
@@ -1781,23 +2033,25 @@ window.RemoteModule = (() => {
     return color
   }
 
+  // Restore remote buttons
   function restoreRemoteButtons() {
     remoteButtons.forEach(createRemoteButton)
   }
 
+  // Setup modal touch events for mobile scrolling
   function setupModalTouchEvents() {
     let touchStartY = 0
     let touchStartX = 0
     let isTouchMove = false
+    let isScrolling = false
 
     remoteModal.addEventListener(
       "touchstart",
       (e) => {
-        if (e.target === remoteModal) {
-          touchStartY = e.touches[0].clientY
-          touchStartX = e.touches[0].clientX
-          isTouchMove = false
-        }
+        touchStartY = e.touches[0].clientY
+        touchStartX = e.touches[0].clientX
+        isTouchMove = false
+        isScrolling = false
       },
       { passive: true },
     )
@@ -1805,15 +2059,15 @@ window.RemoteModule = (() => {
     remoteModal.addEventListener(
       "touchmove",
       (e) => {
-        if (e.target === remoteModal) {
-          const touchY = e.touches[0].clientY
-          const touchX = e.touches[0].clientX
-          const deltaY = Math.abs(touchY - touchStartY)
-          const deltaX = Math.abs(touchX - touchStartX)
+        const touchY = e.touches[0].clientY
+        const touchX = e.touches[0].clientX
+        const deltaY = Math.abs(touchY - touchStartY)
+        const deltaX = Math.abs(touchX - touchStartX)
 
-          if (deltaY > deltaX && deltaY > 10) {
-            isTouchMove = true
-          }
+        // If vertical movement is greater than horizontal, it's a scroll
+        if (deltaY > deltaX && deltaY > 5) {
+          isTouchMove = true
+          isScrolling = true
         }
       },
       { passive: true },
@@ -1822,25 +2076,32 @@ window.RemoteModule = (() => {
     remoteModal.addEventListener(
       "touchend",
       (e) => {
-        if (!isTouchMove && e.target === remoteModal) {
+        // Only close modal on tap (not scroll)
+        if (!isTouchMove && !isScrolling && e.target === remoteModal) {
           closeRemoteModal()
         }
         isTouchMove = false
+        isScrolling = false
       },
       { passive: true },
     )
   }
 
+  // Setup event listeners
   function setupEventListeners() {
+    // Close button
     document.getElementById("closeRemoteControlBtn").addEventListener("click", closeRemoteModal)
 
+    // Edit button
     document.getElementById("remoteEditBtn").addEventListener("click", () => {
       if (currentRemote) {
         if (remoteEditModal.form.style.display === "block") {
+          // Exit edit mode
           remoteEditModal.form.style.display = "none"
           document.getElementById("remoteControlGrid").style.display = "grid"
           document.getElementById("remoteDeleteConfirmation").style.display = "none"
 
+          // Reset edit button icon
           const editBtn = document.getElementById("remoteEditBtn")
           const editBtnIcon = editBtn.querySelector("svg")
           editBtnIcon.innerHTML = ""
@@ -1852,17 +2113,22 @@ window.RemoteModule = (() => {
           editBtnIcon.appendChild(path)
           editBtn.title = "Edit Remote"
 
+          // Re-render buttons to exit edit mode
           renderRemoteButtons(currentRemote)
         } else {
+          // Enter edit mode - show form for adding new button
           remoteEditModal.form.style.display = "block"
           document.getElementById("remoteControlGrid").style.display = "none"
           document.getElementById("remoteDeleteConfirmation").style.display = "none"
 
+          // Update modal title
           document.getElementById("remoteControlTitle").textContent = "Edit Remote"
           document.getElementById("remoteControlSubtitle").textContent = "Configure remote buttons"
 
+          // Reset form for new button
           resetRemoteEditForm()
 
+          // Update edit button icon to X
           const editBtn = document.getElementById("remoteEditBtn")
           const editBtnIcon = editBtn.querySelector("svg")
           editBtnIcon.innerHTML = ""
@@ -1877,6 +2143,7 @@ window.RemoteModule = (() => {
       }
     })
 
+    // Edit form buttons
     document.getElementById("remoteSaveButton").addEventListener("click", saveRemoteButton)
     document.getElementById("remoteCancelEdit").addEventListener("click", () => {
       remoteEditModal.form.style.display = "none"
@@ -1885,12 +2152,14 @@ window.RemoteModule = (() => {
     })
     document.getElementById("remoteDeleteButton").addEventListener("click", showDeleteConfirmation)
 
+    // Delete confirmation buttons
     document.getElementById("remoteCancelDelete").addEventListener("click", cancelDelete)
     document.getElementById("remoteConfirmDelete").addEventListener("click", () => {
       deleteRemoteButton()
       cancelDelete()
     })
 
+    // Form inputs
     remoteEditModal.iconInput.addEventListener("input", updateRemotePreview)
     remoteEditModal.textInput.addEventListener("input", updateRemotePreview)
     remoteEditModal.textColorInput.addEventListener("input", (e) => {
@@ -1904,16 +2173,19 @@ window.RemoteModule = (() => {
     remoteEditModal.entityTypeSelect.addEventListener("change", handleRemoteEntityTypeChange)
     remoteEditModal.serviceSelect.addEventListener("change", handleRemoteServiceChange)
 
+    // Close modal on outside click
     remoteModal.addEventListener("click", (e) => {
       if (e.target === remoteModal) {
         closeRemoteModal()
       }
     })
 
+    // Setup modal touch events for mobile
     setTimeout(() => {
       setupModalTouchEvents()
     }, 100)
 
+    // Keyboard shortcuts
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         if (document.getElementById("remoteDeleteConfirmation").style.display === "block") {
@@ -1929,6 +2201,7 @@ window.RemoteModule = (() => {
     })
   }
 
+  // Toggle edit mode for floorplan buttons
   function enableEditMode(flag) {
     isEditMode = flag
 
@@ -1950,6 +2223,7 @@ window.RemoteModule = (() => {
     }
   }
 
+  // Update positions
   function updatePositions() {
     const img = document.getElementById("viewImage")
     if (!img) return
@@ -1965,10 +2239,12 @@ window.RemoteModule = (() => {
     })
   }
 
+  // Get all remote buttons
   function getRemoteButtons() {
     return remoteButtons
   }
 
+  // Update button config (for floorplan button edit modal)
   function updateConfig(buttonId, newConfig) {
     const index = remoteButtons.findIndex((b) => b.id === buttonId)
     if (index === -1) return false
@@ -1998,6 +2274,7 @@ window.RemoteModule = (() => {
     return true
   }
 
+  // Delete button (for floorplan button edit modal)
   function deleteButton(buttonId) {
     const index = remoteButtons.findIndex((b) => b.id === buttonId)
     if (index !== -1) {
@@ -2012,11 +2289,14 @@ window.RemoteModule = (() => {
     return false
   }
 
+  // Handle state updates from Home Assistant
   function handleStateUpdate(entityId, state, attributes) {
+    // Update remote button state if needed
     remoteButtons.forEach((remote) => {
       if (remote.entityId === entityId) {
         const btn = document.getElementById(remote.id)
         if (btn) {
+          // Update button appearance based on state
           if (state === "on" || state === "playing") {
             btn.classList.add("on")
             btn.classList.remove("off")
@@ -2029,6 +2309,7 @@ window.RemoteModule = (() => {
     })
   }
 
+  // Public API
   return {
     init,
     create,
