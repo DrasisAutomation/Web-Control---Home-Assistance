@@ -77,7 +77,7 @@ window.RemoteModule = (() => {
         cursor: grabbing;
       }
 
-      /* Remote Control Modal Styles */
+      /* Remote Control Modal Styles - MOBILE FIXED */
       .remote-control-modal {
         display: none;
         position: fixed;
@@ -85,25 +85,98 @@ window.RemoteModule = (() => {
         left: 0;
         width: 100%;
         height: 100%;
-        background: transparent;
+        background: rgba(0, 0, 0, 0.5);
         z-index: 1000;
         justify-content: center;
-        align-items: center;
+        align-items: flex-start; /* Changed from center to flex-start for mobile */
+        overflow-y: auto; /* Allow modal container to scroll */
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        padding: 20px 10px; /* Add padding for mobile */
+        box-sizing: border-box;
       }
 
       .remote-control-content {
         background-color: rgba(255, 255, 255, var(--dimmer-content-opacity, 0.95));
         border-radius: 15px;
-        width: 450px;
-        max-height: 600px;
+        width: 100%;
+        max-width: 450px; /* Maximum width on desktop */
+        max-height: 90vh; /* Use viewport height for mobile */
         overflow-y: auto;
         padding: 25px;
         position: relative;
         display: flex;
         flex-direction: column;
         align-items: center;
-        margin: 15px;
+        margin: 15px auto; /* Center with auto margins */
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        box-sizing: border-box;
+      }
+
+      /* Mobile-specific styles */
+      @media (max-width: 768px) {
+        .remote-control-modal {
+          padding: 10px 5px;
+          align-items: flex-start; /* Align to top for mobile */
+        }
+        
+        .remote-control-content {
+          max-height: 85vh; /* Slightly less on mobile to account for browser UI */
+          padding: 20px 15px;
+          margin: 0 auto;
+          width: 95%;
+        }
+        
+        .remote-grid {
+          gap: 10px;
+          margin: 15px 0;
+        }
+        
+        .remote-control-btn {
+          height: 65px;
+          font-size: 16px;
+        }
+        
+        .remote-btn-icon {
+          width: 28px;
+          height: 28px;
+        }
+        
+        .remote-btn-label {
+          font-size: 11px;
+        }
+        
+        .remote-icon-grid {
+          max-height: 150px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .remote-control-content {
+          padding: 15px 10px;
+          max-height: 80vh;
+        }
+        
+        .remote-grid {
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+        }
+        
+        .remote-control-btn {
+          height: 60px;
+          font-size: 15px;
+        }
+        
+        .remote-title {
+          font-size: 20px;
+        }
+        
+        .remote-subtitle {
+          font-size: 12px;
+        }
+        
+        .remote-form-group {
+          margin-bottom: 12px;
+        }
       }
 
       .remote-control-modal .close-modal {
@@ -167,6 +240,7 @@ window.RemoteModule = (() => {
         margin-bottom: 10px;
         font-family: Arial, sans-serif;
         text-align: center;
+        word-break: break-word; /* Prevent long titles from breaking layout */
       }
 
       .remote-subtitle {
@@ -176,6 +250,7 @@ window.RemoteModule = (() => {
         font-family: Arial, sans-serif;
         text-align: center;
         display: none;
+        word-break: break-word;
       }
 
       .remote-grid {
@@ -185,7 +260,7 @@ window.RemoteModule = (() => {
         gap: 15px;
         width: 100%;
         max-width: 350px;
-        margin: 20px;
+        margin: 20px auto; /* Center the grid */
       }
 
       .remote-control-btn {
@@ -205,6 +280,7 @@ window.RemoteModule = (() => {
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         position: relative;
         overflow: hidden;
+        touch-action: manipulation; /* Prevent browser zoom on double-tap */
       }
 
       .remote-control-btn:hover {
@@ -266,6 +342,8 @@ window.RemoteModule = (() => {
       .remote-edit-form {
         width: 100%;
         display: none;
+        overflow-y: auto;
+        max-height: calc(90vh - 150px); /* Ensure form doesn't overflow modal */
       }
 
       .remote-form-group {
@@ -289,12 +367,24 @@ window.RemoteModule = (() => {
         border-radius: 5px;
         font-size: 14px;
         box-sizing: border-box;
+        -webkit-appearance: none; /* Remove default iOS styling */
+        -moz-appearance: none;
+        appearance: none;
       }
 
       .remote-form-input:focus,
       .remote-form-select:focus {
         outline: none;
         border-color: #007aff;
+      }
+
+      /* Style for select dropdown on mobile */
+      .remote-form-select {
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000000'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 20px;
+        padding-right: 40px;
       }
 
       .remote-color-picker-container {
@@ -309,6 +399,18 @@ window.RemoteModule = (() => {
         border: 1px solid #ddd;
         border-radius: 5px;
         cursor: pointer;
+        -webkit-appearance: none;
+        border: none;
+        padding: 0;
+      }
+
+      .remote-color-picker::-webkit-color-swatch-wrapper {
+        padding: 0;
+      }
+
+      .remote-color-picker::-webkit-color-swatch {
+        border: 1px solid #ddd;
+        border-radius: 5px;
       }
 
       .remote-color-value {
@@ -356,7 +458,7 @@ window.RemoteModule = (() => {
       }
 
       .remote-btn {
-        padding: 10px 20px;
+        padding: 12px 20px;
         border: none;
         border-radius: 5px;
         font-size: 14px;
@@ -364,6 +466,7 @@ window.RemoteModule = (() => {
         cursor: pointer;
         transition: all 0.2s ease;
         flex: 1;
+        min-height: 44px; /* Minimum touch target size for mobile */
       }
 
       .remote-btn-primary {
@@ -404,6 +507,7 @@ window.RemoteModule = (() => {
         background: rgba(0, 0, 0, 0.05);
         border-radius: 10px;
         margin-top: 10px;
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
       }
 
       .remote-icon-option {
@@ -418,6 +522,7 @@ window.RemoteModule = (() => {
         padding: 8px;
         background: white;
         border: 2px solid transparent;
+        touch-action: manipulation;
       }
 
       .remote-icon-option svg {
@@ -487,6 +592,11 @@ window.RemoteModule = (() => {
       .remote-icon-option.selected svg,
       .remote-icon-option.selected svg * {
         fill: white !important;
+      }
+
+      /* Prevent body scroll when modal is open */
+      body.modal-open {
+        overflow: hidden;
       }
     `
         document.head.appendChild(style)
@@ -1128,6 +1238,9 @@ window.RemoteModule = (() => {
 
         // Show modal
         remoteModal.style.display = "flex"
+
+        // Prevent body scrolling
+        document.body.classList.add('modal-open')
     }
 
     // Close remote modal
@@ -1140,6 +1253,9 @@ window.RemoteModule = (() => {
         document.getElementById("remoteControlGrid").style.display = "grid"
         remoteEditModal.form.style.display = "none"
         document.getElementById("remoteDeleteConfirmation").style.display = "none"
+
+        // Allow body scrolling again
+        document.body.classList.remove('modal-open')
     }
 
     // Populate icon grid
@@ -1438,107 +1554,107 @@ window.RemoteModule = (() => {
         }
     }
 
-async function renderRemoteButtons(config) {
-    if (!remoteGrid) {
-        console.warn("Remote grid not initialized yet")
-        return
-    }
+    async function renderRemoteButtons(config) {
+        if (!remoteGrid) {
+            console.warn("Remote grid not initialized yet")
+            return
+        }
 
-    remoteGrid.innerHTML = ""
+        remoteGrid.innerHTML = ""
 
-    const remoteConfig = config.remoteConfig || []
-    
-    // Check if modal exists first
-    const emptyState = document.getElementById("remoteEmptyState")
-    
-    if (remoteConfig.length === 0) {
-        // Create empty state if it doesn't exist
-        if (!emptyState) {
-            const emptyDiv = document.createElement("div")
-            emptyDiv.className = "remote-empty-state"
-            emptyDiv.id = "remoteEmptyState"
-            emptyDiv.innerHTML = `
+        const remoteConfig = config.remoteConfig || []
+
+        // Check if modal exists first
+        const emptyState = document.getElementById("remoteEmptyState")
+
+        if (remoteConfig.length === 0) {
+            // Create empty state if it doesn't exist
+            if (!emptyState) {
+                const emptyDiv = document.createElement("div")
+                emptyDiv.className = "remote-empty-state"
+                emptyDiv.id = "remoteEmptyState"
+                emptyDiv.innerHTML = `
                 <svg viewBox="0 0 24 24">
                     <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                 </svg>
                 <br>
                 No buttons yet. Click the edit button to add your first button.
             `
-            remoteGrid.appendChild(emptyDiv)
-            emptyDiv.style.display = 'block'
-        } else {
-            emptyState.style.display = 'block'
-        }
-        return
-    }
-
-    // Hide empty state if it exists
-    if (emptyState) {
-        emptyState.style.display = 'none'
-    }
-
-    // Render all buttons
-    for (const [index, btnConfig] of remoteConfig.entries()) {
-        const btnElement = document.createElement("button")
-        btnElement.className = "remote-control-btn"
-        btnElement.dataset.index = index
-
-        btnElement.style.color = btnConfig.textColor || "#000"
-        if (!btnConfig.bgColor || btnConfig.bgColor.toLowerCase() === "#ffffff") {
-            btnElement.style.background = "linear-gradient(145deg, #ffffff, #f0f0f0)"
-        } else {
-            btnElement.style.background = `linear-gradient(145deg, ${btnConfig.bgColor}, ${darkenColor(btnConfig.bgColor, 20)})`
-        }
-
-        // Create icon container
-        const iconContainer = document.createElement("div")
-        iconContainer.className = "remote-btn-icon"
-
-        // Load SVG icon
-        if (btnConfig.icon) {
-            try {
-                const svgContent = await loadSVG(btnConfig.icon)
-                const svg = createSVGFromContent(svgContent, btnConfig.textColor || "#000", 32)
-                iconContainer.appendChild(svg)
-            } catch (error) {
-                console.error("Error loading icon:", error)
+                remoteGrid.appendChild(emptyDiv)
+                emptyDiv.style.display = 'block'
+            } else {
+                emptyState.style.display = 'block'
             }
+            return
         }
 
-        // Create label
-        const label = document.createElement("span")
-        label.className = "remote-btn-label"
-        label.textContent = btnConfig.text || "Button"
+        // Hide empty state if it exists
+        if (emptyState) {
+            emptyState.style.display = 'none'
+        }
 
-        btnElement.appendChild(iconContainer)
-        btnElement.appendChild(label)
+        // Render all buttons
+        for (const [index, btnConfig] of remoteConfig.entries()) {
+            const btnElement = document.createElement("button")
+            btnElement.className = "remote-control-btn"
+            btnElement.dataset.index = index
 
-        // Click handler - send command
-        btnElement.addEventListener("click", () => {
-            sendRemoteCommand(btnConfig)
-        })
-
-        // Long press to edit
-        btnElement.addEventListener("mousedown", (e) => {
-            const startTime = Date.now()
-            const longPressTimeout = setTimeout(() => {
-                editRemoteButton(index)
-                e.preventDefault()
-            }, 700)
-
-            const cleanup = () => {
-                clearTimeout(longPressTimeout)
-                document.removeEventListener("mouseup", cleanup)
-                document.removeEventListener("mouseleave", cleanup)
+            btnElement.style.color = btnConfig.textColor || "#000"
+            if (!btnConfig.bgColor || btnConfig.bgColor.toLowerCase() === "#ffffff") {
+                btnElement.style.background = "linear-gradient(145deg, #ffffff, #f0f0f0)"
+            } else {
+                btnElement.style.background = `linear-gradient(145deg, ${btnConfig.bgColor}, ${darkenColor(btnConfig.bgColor, 20)})`
             }
 
-            document.addEventListener("mouseup", cleanup)
-            document.addEventListener("mouseleave", cleanup)
-        })
+            // Create icon container
+            const iconContainer = document.createElement("div")
+            iconContainer.className = "remote-btn-icon"
 
-        remoteGrid.appendChild(btnElement)
+            // Load SVG icon
+            if (btnConfig.icon) {
+                try {
+                    const svgContent = await loadSVG(btnConfig.icon)
+                    const svg = createSVGFromContent(svgContent, btnConfig.textColor || "#000", 32)
+                    iconContainer.appendChild(svg)
+                } catch (error) {
+                    console.error("Error loading icon:", error)
+                }
+            }
+
+            // Create label
+            const label = document.createElement("span")
+            label.className = "remote-btn-label"
+            label.textContent = btnConfig.text || "Button"
+
+            btnElement.appendChild(iconContainer)
+            btnElement.appendChild(label)
+
+            // Click handler - send command
+            btnElement.addEventListener("click", () => {
+                sendRemoteCommand(btnConfig)
+            })
+
+            // Long press to edit
+            btnElement.addEventListener("mousedown", (e) => {
+                const startTime = Date.now()
+                const longPressTimeout = setTimeout(() => {
+                    editRemoteButton(index)
+                    e.preventDefault()
+                }, 700)
+
+                const cleanup = () => {
+                    clearTimeout(longPressTimeout)
+                    document.removeEventListener("mouseup", cleanup)
+                    document.removeEventListener("mouseleave", cleanup)
+                }
+
+                document.addEventListener("mouseup", cleanup)
+                document.addEventListener("mouseleave", cleanup)
+            })
+
+            remoteGrid.appendChild(btnElement)
+        }
     }
-}
 
     // Send remote command to Home Assistant
     function sendRemoteCommand(btnConfig) {
