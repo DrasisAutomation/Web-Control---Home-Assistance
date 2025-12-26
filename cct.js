@@ -911,9 +911,11 @@ window.CCTModule = (function () {
 
                 const touch = e.touches[0];
                 const rect = brightnessSlider.getBoundingClientRect();
-                const y = rect.bottom - touch.clientY;
-                const percent = Math.min(Math.max(y / rect.height, 0), 1);
-                const value = Math.round(100 - (percent * 100));
+
+                // CORRECTED: Since slider is rotated -90deg, we need to use horizontal calculation
+                const x = touch.clientX - rect.left;
+                const percent = Math.min(Math.max(x / rect.width, 0), 1);
+                const value = Math.round(percent * 100);
 
                 brightnessSlider.value = value;
                 if (brightnessValue) {
@@ -927,7 +929,6 @@ window.CCTModule = (function () {
             }, { passive: true });
         }
 
-        // Temperature slider - update display while dragging (TOUCH FIXED)
         if (temperatureSlider) {
             // For mouse
             temperatureSlider.addEventListener('input', (e) => {
@@ -941,7 +942,7 @@ window.CCTModule = (function () {
                 updateTemperature(value);
             });
 
-            // TOUCH SUPPORT - FIXED
+            // TOUCH SUPPORT - FIXED (CORRECTED CALCULATION)
             temperatureSlider.addEventListener('touchstart', (e) => {
                 e.stopPropagation(); // Prevent panning
             }, { passive: true });
@@ -952,9 +953,12 @@ window.CCTModule = (function () {
 
                 const touch = e.touches[0];
                 const rect = temperatureSlider.getBoundingClientRect();
-                const y = rect.bottom - touch.clientY;
-                const percent = Math.min(Math.max(y / rect.height, 0), 1);
-                const value = Math.round(100 - (percent * 100));
+
+                // CORRECTED: Since slider is rotated -90deg, we need to use horizontal calculation
+                // The slider is vertical on screen but rotated, so use X coordinate
+                const x = touch.clientX - rect.left;
+                const percent = Math.min(Math.max(x / rect.width, 0), 1);
+                const value = Math.round(percent * 100);
 
                 temperatureSlider.value = value;
                 updateKelvinDisplay(value);
