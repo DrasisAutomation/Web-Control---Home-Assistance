@@ -317,6 +317,64 @@ window.CCTModule = (function () {
         kelvinDisplay.textContent = `${kelvin}K`;
     }
 
+    // Handle touch for vertical slider
+    function handleVerticalSliderTouch(slider, touch, callback) {
+        const rect = slider.getBoundingClientRect();
+        
+        // Calculate touch position relative to slider center
+        const sliderCenterX = rect.left + rect.width / 2;
+        const sliderCenterY = rect.top + rect.height / 2;
+        
+        // Get touch coordinates
+        const touchX = touch.clientX;
+        const touchY = touch.clientY;
+        
+        // Calculate angle from center (slider is rotated -90deg)
+        const deltaX = touchX - sliderCenterX;
+        const deltaY = touchY - sliderCenterY;
+        
+        // Calculate angle (0 to 1) where 0 = top, 1 = bottom
+        // Since slider is vertical and rotated, we need to map correctly
+        // For vertical slider: dragging down = increasing value
+        const angle = Math.atan2(deltaY, deltaX) + Math.PI / 2; // Adjust for -90deg rotation
+        
+        // Normalize angle to 0-1 range
+        let normalized = (angle / Math.PI);
+        if (normalized < 0) normalized += 2;
+        normalized = normalized % 1;
+        
+        // Convert to 0-100 value (0% at top, 100% at bottom)
+        const value = Math.round(normalized * 100);
+        
+        // Clamp to 0-100
+        const clampedValue = Math.max(0, Math.min(100, value));
+        
+        slider.value = clampedValue;
+        if (callback) callback(clampedValue);
+    }
+
+    // Simplified touch handler for vertical slider
+    function handleVerticalSliderTouchSimple(slider, touch, callback) {
+        const rect = slider.getBoundingClientRect();
+        
+        // Since the slider is rotated -90deg, we need to handle coordinates differently
+        // The slider's visual top is actually its left side after rotation
+        
+        // Get touch position relative to slider
+        const relativeY = touch.clientY - rect.top;
+        const percent = relativeY / rect.height;
+        
+        // Map: Top of slider (0% height) = 0% value, Bottom of slider (100% height) = 100% value
+        // This means dragging down increases the value
+        const value = Math.round(percent * 100);
+        
+        // Clamp to 0-100
+        const clampedValue = Math.max(0, Math.min(100, value));
+        
+        slider.value = clampedValue;
+        if (callback) callback(clampedValue);
+    }
+
     // Initialize the module
     function init(cb) {
         callbacks = cb || {};
@@ -713,30 +771,30 @@ window.CCTModule = (function () {
     // Show edit modal for CCT
     function showEditModal(config) {
         console.log('CCT: Opening edit modal for:', config.id, 'type: cct');
-
+        
         // Mark button as selected
         if (window.selectButtonForEdit) {
             window.selectButtonForEdit(config.id, 'cct');
         }
-
+        
         // Fill the edit form
         const editEntityId = document.getElementById('editEntityId');
         const editName = document.getElementById('editName');
         const editIcon = document.getElementById('editIcon');
-
+        
         if (editEntityId) editEntityId.value = config.entityId || '';
         if (editName) editName.value = config.name || 'CCT Light';
         if (editIcon) editIcon.value = config.iconClass || 'light-bulb-1.svg';
-
+        
         // Store which button we're editing
         window.currentEditingButton = config.id;
         window.currentEditingType = 'cct';
-
+        
         // Also set in buttons module
         if (window.buttons && window.buttons.setEditingButtonId) {
             window.buttons.setEditingButtonId(config.id);
         }
-
+        
         // Show modal
         const modal = document.getElementById('buttonEditModal');
         if (modal) {
@@ -864,7 +922,7 @@ window.CCTModule = (function () {
         });
     }
 
-    // Setup event listeners
+    // Setup event listeners with FIXED touch handling
     function setupEventListeners() {
         // Close button
         if (closeCCTBtn) {
@@ -887,7 +945,7 @@ window.CCTModule = (function () {
             }
         });
 
-        // Brightness slider - update display while dragging
+        // Brightness slider - mouse events
         if (brightnessSlider) {
             brightnessSlider.addEventListener('input', (e) => {
                 const value = parseInt(e.target.value);
@@ -901,29 +959,26 @@ window.CCTModule = (function () {
                 updateBrightness(value);
             });
 
-            // FIXED TOUCH HANDLING
+            // FIXED TOUCH EVENTS for brightness slider
             brightnessSlider.addEventListener('touchstart', (e) => {
                 e.stopPropagation();
-            }, { passive: true });
+                const touch = e.touches[0];
+                handleVerticalSliderTouchSimple(brightnessSlider, touch, (value) => {
+                    if (brightnessValue) {
+                        brightnessValue.textContent = `${value}%`;
+                    }
+                });
+            }, { passive: false });
 
             brightnessSlider.addEventListener('touchmove', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-
                 const touch = e.touches[0];
-                const rect = brightnessSlider.getBoundingClientRect();
-
-                // FIX: Same calculation as temperature slider
-                const sliderY = touch.clientY - rect.top;
-                const percent = Math.min(Math.max(sliderY / rect.height, 0), 1);
-                const value = Math.round(percent * 100); // 0% at top, 100% at bottom
-
-                // If you want opposite direction: const value = Math.round(100 - (percent * 100));
-
-                brightnessSlider.value = value;
-                if (brightnessValue) {
-                    brightnessValue.textContent = `${value}%`;
-                }
+                handleVerticalSliderTouchSimple(brightnessSlider, touch, (value) => {
+                    if (brightnessValue) {
+                        brightnessValue.textContent = `${value}%`;
+                    }
+                });
             }, { passive: false });
 
             brightnessSlider.addEventListener('touchend', (e) => {
@@ -932,45 +987,30 @@ window.CCTModule = (function () {
             }, { passive: true });
         }
 
-        // Temperature slider - update display while dragging (TOUCH FIXED)
+        // Temperature slider - mouse events
         if (temperatureSlider) {
-            // For mouse
             temperatureSlider.addEventListener('input', (e) => {
                 const value = parseInt(e.target.value);
                 updateKelvinDisplay(value);
             });
 
-            // For mouse release
             temperatureSlider.addEventListener('change', (e) => {
                 const value = parseInt(e.target.value);
                 updateTemperature(value);
             });
 
-            // FIXED TOUCH HANDLING
+            // FIXED TOUCH EVENTS for temperature slider
             temperatureSlider.addEventListener('touchstart', (e) => {
-                e.stopPropagation(); // Prevent panning
-            }, { passive: true });
+                e.stopPropagation();
+                const touch = e.touches[0];
+                handleVerticalSliderTouchSimple(temperatureSlider, touch, updateKelvinDisplay);
+            }, { passive: false });
 
             temperatureSlider.addEventListener('touchmove', (e) => {
-                e.preventDefault(); // Allow touch dragging
+                e.preventDefault();
                 e.stopPropagation();
-
                 const touch = e.touches[0];
-                const rect = temperatureSlider.getBoundingClientRect();
-
-                // FIX: Calculate position relative to slider
-                // Since slider is rotated -90deg, we use Y coordinate for vertical movement
-                const sliderY = touch.clientY - rect.top;
-                const percent = Math.min(Math.max(sliderY / rect.height, 0), 1);
-
-                // FIX: Map correctly (0% at top, 100% at bottom)
-                const value = Math.round(percent * 100);
-
-                // Apply value (invert if needed - currently 0% at top, 100% at bottom)
-                // If you want 0% at bottom, 100% at top, use: const value = Math.round(100 - (percent * 100));
-
-                temperatureSlider.value = value;
-                updateKelvinDisplay(value);
+                handleVerticalSliderTouchSimple(temperatureSlider, touch, updateKelvinDisplay);
             }, { passive: false });
 
             temperatureSlider.addEventListener('touchend', (e) => {

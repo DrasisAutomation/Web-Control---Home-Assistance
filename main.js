@@ -1100,7 +1100,7 @@ document.addEventListener("DOMContentLoaded", () => {
         footer.innerHTML = `
         <span>${text}</span>
         <div style="display: flex; gap: 10px;">
-            <button class="footer-control load-btn" id="loadBtn">📂 Load.2</button>
+            <button class="footer-control load-btn" id="loadBtn">📂 Load.3</button>
             <button class="footer-control reset-footer-btn" id="footerResetBtn" 
                     style="background: #666; padding: 4px 8px; border-radius: 4px;">
                 ↻
