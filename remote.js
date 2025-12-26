@@ -1090,8 +1090,8 @@ window.RemoteModule = (() => {
             startTop = Number.parseFloat(button.style.top) || rect.top
 
             e.stopPropagation()
-            e.preventDefault()
-        })
+            // ❌ DO NOT preventDefault
+        }, { passive: true })
 
         button.addEventListener("touchmove", (e) => {
             if (!isEditMode) return
@@ -1108,8 +1108,9 @@ window.RemoteModule = (() => {
                 startDrag(e, button, config)
             }
 
-            e.preventDefault()
-        })
+            // ❌ DO NOT preventDefault
+        }, { passive: true })
+
 
         button.addEventListener("touchend", () => {
             if (isEditMode) {
@@ -1148,8 +1149,8 @@ window.RemoteModule = (() => {
         const dragMoveHandler = (moveEvent) => {
             if (!isDragging) return
 
-            const clientX = moveEvent.type.includes("touch") ? moveEvent.touches[0].clientX : moveEvent.clientX
-            const clientY = moveEvent.type.includes("touch") ? moveEvent.touches[0].clientY : moveEvent.clientY
+            const clientX = moveEvent.touches[0].clientX
+            const clientY = moveEvent.touches[0].clientY
 
             const deltaX = clientX - startDragX
             const deltaY = clientY - startDragY
@@ -1157,8 +1158,10 @@ window.RemoteModule = (() => {
             button.style.left = `${originalLeft + deltaX}px`
             button.style.top = `${originalTop + deltaY}px`
 
+            // ONLY block scroll while dragging button
             moveEvent.preventDefault()
         }
+
 
         const dragEndHandler = () => {
             if (!isDragging) return
@@ -1992,6 +1995,23 @@ window.RemoteModule = (() => {
                 closeRemoteModal()
             }
         })
+
+        // let modalTouchMoved = false
+
+        // remoteModal.addEventListener("touchstart", () => {
+        //     modalTouchMoved = false
+        // }, { passive: true })
+
+        // remoteModal.addEventListener("touchmove", () => {
+        //     modalTouchMoved = true
+        // }, { passive: true })
+
+        // remoteModal.addEventListener("touchend", (e) => {
+        //     if (!modalTouchMoved && e.target === remoteModal) {
+        //         closeRemoteModal()
+        //     }
+        // }, { passive: true })
+
 
         // Setup modal touch events for mobile
         setTimeout(() => {
