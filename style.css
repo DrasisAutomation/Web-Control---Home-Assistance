@@ -958,3 +958,28 @@ body {
     border: 2px solid #f44336;
     box-shadow: 0 0 20px rgba(244, 67, 54, 0.5);
 }
+
+/* Touch wrapper for better mobile experience */
+.touch-wrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 18rem;
+    height: 3.5rem;
+    transform: translate(-50%, -50%) rotate(-90deg);
+    touch-action: none; /* Disable browser touch actions */
+    cursor: pointer;
+    z-index: 10;
+}
+
+/* Make the actual slider invisible but functional for mouse */
+.touch-wrapper input[type="range"] {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0.01; /* Almost invisible but still clickable for mouse */
+    z-index: 11;
+    pointer-events: auto;
+    margin: 0;
+    -webkit-appearance: none;
+}

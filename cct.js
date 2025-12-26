@@ -267,34 +267,40 @@ window.CCTModule = (function () {
     function createModal() {
         if (document.getElementById('cctModal')) return;
 
-        const modalHTML = `
-            <div class="cct-modal" id="cctModal">
-                <div class="cct-modal-content">
-                    <button class="close-modal" id="closeCCTBtn">&times;</button>
-                    <div class="cct-sliders-container">
-                        <!-- Brightness Slider -->
-                        <div class="cct-slider-wrapper">
-                            <div class="cct-slider-title">Brightness</div>
-                            <div class="cct-wrapper">
-                                <input type="range" min="0" max="100" value="50" 
-                                       class="cct-brightness-slider" id="cctBrightnessSlider" />
-                            </div>
-                            <div class="cct-brightness-percentage" id="cctBrightnessValue">50%</div>
-                        </div>
+        // In createModal() function of cct.js, update the HTML:
 
-                        <!-- Temperature Slider -->
-                        <div class="cct-slider-wrapper">
-                            <div class="cct-slider-title">CCT</div>
-                            <div class="cct-wrapper">
-                                <input type="range" min="0" max="100" value="50" 
-                                       class="cct-temperature-slider" id="cctTemperatureSlider" />
-                            </div>
-                            <div class="cct-kelvin-display" id="cctKelvinDisplay">3000K</div>
+        const modalHTML = `
+    <div class="cct-modal" id="cctModal">
+        <div class="cct-modal-content">
+            <button class="close-modal" id="closeCCTBtn">&times;</button>
+            <div class="cct-sliders-container">
+                <!-- Brightness Slider -->
+                <div class="cct-slider-wrapper">
+                    <div class="cct-slider-title">Brightness</div>
+                    <div class="cct-wrapper">
+                        <div class="touch-wrapper" id="cctBrightnessTouch">
+                            <input type="range" min="0" max="100" value="50" 
+                                   class="cct-brightness-slider" id="cctBrightnessSlider" />
                         </div>
                     </div>
+                    <div class="cct-brightness-percentage" id="cctBrightnessValue">50%</div>
+                </div>
+
+                <!-- Temperature Slider -->
+                <div class="cct-slider-wrapper">
+                    <div class="cct-slider-title">CCT</div>
+                    <div class="cct-wrapper">
+                        <div class="touch-wrapper" id="cctTemperatureTouch">
+                            <input type="range" min="0" max="100" value="50" 
+                                   class="cct-temperature-slider" id="cctTemperatureSlider" />
+                        </div>
+                    </div>
+                    <div class="cct-kelvin-display" id="cctKelvinDisplay">3000K</div>
                 </div>
             </div>
-        `;
+        </div>
+    </div>
+`;
         document.body.insertAdjacentHTML('beforeend', modalHTML);
 
         // Get references
@@ -864,112 +870,151 @@ window.CCTModule = (function () {
         });
     }
 
-    // Setup event listeners
-    function setupEventListeners() {
-        // Close button
-        if (closeCCTBtn) {
-            closeCCTBtn.addEventListener('click', closeCCTModal);
-        }
+function setupEventListeners() {
+    // Close button
+    if (closeCCTBtn) {
+        closeCCTBtn.addEventListener('click', closeCCTModal);
+    }
 
-        // Close on overlay click
-        if (cctModal) {
-            cctModal.addEventListener('click', (e) => {
-                if (e.target === cctModal) {
-                    closeCCTModal();
-                }
-            });
-        }
-
-        // ESC key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && cctModal && cctModal.style.display === 'flex') {
+    // Close on overlay click
+    if (cctModal) {
+        cctModal.addEventListener('click', (e) => {
+            if (e.target === cctModal) {
                 closeCCTModal();
             }
         });
-
-        // Brightness slider - update display while dragging
-        if (brightnessSlider) {
-            brightnessSlider.addEventListener('input', (e) => {
-                const value = parseInt(e.target.value);
-                if (brightnessValue) {
-                    brightnessValue.textContent = `${value}%`;
-                }
-            });
-
-            // Brightness slider - update when released
-            brightnessSlider.addEventListener('change', (e) => {
-                const value = parseInt(e.target.value);
-                updateBrightness(value);
-            });
-            brightnessSlider.addEventListener('touchstart', (e) => {
-                e.stopPropagation();
-            }, { passive: true });
-
-            brightnessSlider.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const touch = e.touches[0];
-                const rect = brightnessSlider.getBoundingClientRect();
-
-                // CORRECTED: Since slider is rotated -90deg, we need to use horizontal calculation
-                const x = touch.clientX - rect.left;
-                const percent = Math.min(Math.max(x / rect.width, 0), 1);
-                const value = Math.round(percent * 100);
-
-                brightnessSlider.value = value;
-                if (brightnessValue) {
-                    brightnessValue.textContent = `${value}%`;
-                }
-            }, { passive: false });
-
-            brightnessSlider.addEventListener('touchend', (e) => {
-                const value = parseInt(brightnessSlider.value);
-                updateBrightness(value);
-            }, { passive: true });
-        }
-
-        if (temperatureSlider) {
-            // For mouse
-            temperatureSlider.addEventListener('input', (e) => {
-                const value = parseInt(e.target.value);
-                updateKelvinDisplay(value);
-            });
-
-            // For mouse release
-            temperatureSlider.addEventListener('change', (e) => {
-                const value = parseInt(e.target.value);
-                updateTemperature(value);
-            });
-
-            // TOUCH SUPPORT - FIXED (CORRECTED CALCULATION)
-            temperatureSlider.addEventListener('touchstart', (e) => {
-                e.stopPropagation(); // Prevent panning
-            }, { passive: true });
-
-            temperatureSlider.addEventListener('touchmove', (e) => {
-                e.preventDefault(); // Allow touch dragging
-                e.stopPropagation();
-
-                const touch = e.touches[0];
-                const rect = temperatureSlider.getBoundingClientRect();
-
-                // CORRECTED: Since slider is rotated -90deg, we need to use horizontal calculation
-                // The slider is vertical on screen but rotated, so use X coordinate
-                const x = touch.clientX - rect.left;
-                const percent = Math.min(Math.max(x / rect.width, 0), 1);
-                const value = Math.round(percent * 100);
-
-                temperatureSlider.value = value;
-                updateKelvinDisplay(value);
-            }, { passive: false });
-
-            temperatureSlider.addEventListener('touchend', (e) => {
-                const value = parseInt(temperatureSlider.value);
-                updateTemperature(value);
-            }, { passive: true });
-        }
     }
+
+    // ESC key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && cctModal && cctModal.style.display === 'flex') {
+            closeCCTModal();
+        }
+    });
+
+    // Setup touch handlers for brightness
+    const brightnessTouch = document.getElementById('cctBrightnessTouch');
+    if (brightnessTouch && brightnessSlider) {
+        setupSliderTouchHandler(brightnessTouch, brightnessSlider, (value) => {
+            if (brightnessValue) {
+                brightnessValue.textContent = `${value}%`;
+            }
+            updateBrightness(value);
+        });
+    }
+
+    // Setup touch handlers for temperature
+    const temperatureTouch = document.getElementById('cctTemperatureTouch');
+    if (temperatureTouch && temperatureSlider) {
+        setupSliderTouchHandler(temperatureTouch, temperatureSlider, (value) => {
+            updateKelvinDisplay(value);
+            updateTemperature(value);
+        });
+    }
+
+    // Mouse events for desktop
+    if (brightnessSlider) {
+        brightnessSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            if (brightnessValue) {
+                brightnessValue.textContent = `${value}%`;
+            }
+        });
+
+        brightnessSlider.addEventListener('change', (e) => {
+            const value = parseInt(e.target.value);
+            updateBrightness(value);
+        });
+    }
+
+    if (temperatureSlider) {
+        temperatureSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            updateKelvinDisplay(value);
+        });
+
+        temperatureSlider.addEventListener('change', (e) => {
+            const value = parseInt(e.target.value);
+            updateTemperature(value);
+        });
+    }
+}
+
+// Universal touch handler for vertical sliders
+function setupSliderTouchHandler(touchWrapper, sliderElement, onChange) {
+    if (!touchWrapper || !sliderElement) return;
+
+    let isDragging = false;
+    let lastY = 0;
+    
+    touchWrapper.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        isDragging = true;
+        const touch = e.touches[0];
+        const rect = touchWrapper.getBoundingClientRect();
+        
+        // Calculate initial value based on touch position
+        updateSliderValue(touch, rect, sliderElement, onChange);
+        
+        // Store for smooth dragging
+        lastY = touch.clientY;
+    }, { passive: false });
+
+    touchWrapper.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const touch = e.touches[0];
+        const rect = touchWrapper.getBoundingClientRect();
+        
+        // Smooth dragging: use delta for better UX
+        const deltaY = touch.clientY - lastY;
+        
+        // Get current value
+        let currentValue = parseInt(sliderElement.value);
+        
+        // Adjust based on drag direction (drag down = decrease, drag up = increase)
+        // Each pixel = ~1% change (adjust sensitivity as needed)
+        const sensitivity = 0.5;
+        currentValue -= deltaY * sensitivity;
+        
+        // Clamp value
+        currentValue = Math.max(0, Math.min(100, Math.round(currentValue)));
+        
+        // Update slider
+        sliderElement.value = currentValue;
+        onChange(currentValue);
+        
+        // Update last position
+        lastY = touch.clientY;
+    }, { passive: false });
+
+    touchWrapper.addEventListener('touchend', (e) => {
+        isDragging = false;
+    }, { passive: true });
+
+    touchWrapper.addEventListener('touchcancel', (e) => {
+        isDragging = false;
+    }, { passive: true });
+}
+
+function updateSliderValue(touch, rect, sliderElement, onChange) {
+    // Calculate touch position relative to wrapper
+    // Since wrapper is rotated -90deg, we use Y coordinate
+    const y = touch.clientY - rect.top;
+    const percent = Math.min(Math.max(y / rect.height, 0), 1);
+    
+    // Invert: top = 100%, bottom = 0%
+    const value = Math.round(100 - (percent * 100));
+    
+    // Update slider
+    sliderElement.value = value;
+    onChange(value);
+}
 
     // Toggle edit mode
     function enableEditMode(flag) {
