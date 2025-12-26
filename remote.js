@@ -93,7 +93,7 @@ window.RemoteModule = (() => {
         -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
         padding: 20px 10px; /* Add padding for mobile */
         box-sizing: border-box;
-        touch-action: none; /* Prevent modal itself from capturing all touches */
+         touch-action: pan-y;
       }
 
       .remote-control-content {
@@ -114,11 +114,6 @@ window.RemoteModule = (() => {
         /* Mobile scroll fix */
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
-        touch-action: pan-y;
-      }
-
-      /* Allow scrolling on the content areas */
-      .remote-control-modal * {
         touch-action: pan-y;
       }
 
@@ -173,6 +168,8 @@ window.RemoteModule = (() => {
           max-height: 150px;
           -webkit-overflow-scrolling: touch;
           overscroll-behavior: contain;
+            overflow-y: auto;
+  touch-action: pan-y;
         }
         
         /* Prevent zoom on double tap */
@@ -639,6 +636,13 @@ window.RemoteModule = (() => {
       body.modal-open {
         overflow: hidden;
       }
+        .remote-control-content,
+.remote-icon-grid,
+.remote-edit-form {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
     `
         document.head.appendChild(style)
     }
@@ -1783,49 +1787,40 @@ window.RemoteModule = (() => {
                 }
             })
 
-            // TOUCH EVENTS for mobile
             btnElement.addEventListener("touchstart", (e) => {
-                e.preventDefault()
                 touchStartY = e.touches[0].clientY
                 isScrolling = false
 
                 longPressTimer = setTimeout(() => {
-                    // Only edit if we haven't scrolled
                     if (!isScrolling) {
                         editRemoteButton(index)
-                        longPressTimer = null
                     }
                 }, 700)
-            })
+            }, { passive: true })
 
             btnElement.addEventListener("touchmove", (e) => {
-                const touchY = e.touches[0].clientY
-                const deltaY = Math.abs(touchY - touchStartY)
+                const deltaY = Math.abs(e.touches[0].clientY - touchStartY)
 
-                // If vertical movement > 5px, treat as scroll
-                if (deltaY > 5) {
+                if (deltaY > 8) {  // SCROLL INTENT
                     isScrolling = true
                     if (longPressTimer) {
                         clearTimeout(longPressTimer)
                         longPressTimer = null
                     }
                 }
-            })
+            }, { passive: true })
 
-            btnElement.addEventListener("touchend", (e) => {
+            btnElement.addEventListener("touchend", () => {
                 if (longPressTimer) {
                     clearTimeout(longPressTimer)
                     longPressTimer = null
                 }
 
-                // Only send command if it wasn't a scroll and not a long press
-                if (!isScrolling && e.cancelable) {
-                    e.preventDefault()
+                if (!isScrolling) {
                     sendRemoteCommand(btnConfig)
                 }
-
-                isScrolling = false
             })
+
 
             remoteGrid.appendChild(btnElement)
         }
