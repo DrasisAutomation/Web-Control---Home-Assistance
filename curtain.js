@@ -213,7 +213,7 @@ window.CurtainModule = (function () {
         positionSlider = document.getElementById('curtainPositionSlider');
         positionValue = document.getElementById('curtainPositionValue');
         closeCurtainBtn = document.getElementById('closeCurtainBtn');
-        
+
         // Initialize to empty (will be set by entity value)
         if (positionValue) {
             positionValue.textContent = '';
@@ -234,7 +234,7 @@ window.CurtainModule = (function () {
         setupEventListeners();
 
         console.log('Curtain module initialized');
-        
+
         // 🔁 Request initial HA state sync
         setTimeout(() => {
             curtainButtons.forEach(cfg => {
@@ -273,12 +273,13 @@ window.CurtainModule = (function () {
         config.type = 'curtain';
         config.iconClass = config.iconClass || 'curtain1.svg';
         config.name = config.name || 'Curtain';
-        
+
         // IMPORTANT: Use entity value if provided, otherwise 0 (not 50)
+        // This ensures new curtains start at 0% (fully closed) not 50%
         config.currentPosition = typeof config.currentPosition === 'number'
             ? config.currentPosition
             : 0; // Changed from 50 to 0
-            
+
         config.isOpen = config.currentPosition > 0;
         config.position = config.position || { x: 0.5, y: 0.5 };
 
@@ -617,10 +618,10 @@ window.CurtainModule = (function () {
     // Open curtain modal - FIXED: Always use actual entity value
     function openCurtainModal(config) {
         currentCurtain = config;
-        
+
         // Get current position from config (which should be updated by handleStateUpdate)
         let currentPosition = config.currentPosition || 0;
-        
+
         console.log('Opening curtain modal for', config.name, 'position from config:', currentPosition);
 
         // Also check button dataset as backup
@@ -630,6 +631,11 @@ window.CurtainModule = (function () {
             if (!isNaN(buttonPos)) {
                 currentPosition = buttonPos;
             }
+        }
+
+        // Ensure it's not magically set to 50
+        if (currentPosition === 50 && !config.currentPosition) {
+            currentPosition = 0;
         }
 
         // Update modal with actual entity value
@@ -650,7 +656,7 @@ window.CurtainModule = (function () {
             curtainModal.style.alignItems = 'center';
             curtainModal.style.justifyContent = 'center';
         }
-        
+
         // Request fresh state from HA to ensure we have the latest
         if (window.ws && window.ws.readyState === WebSocket.OPEN) {
             window.ws.send(JSON.stringify({
@@ -669,29 +675,36 @@ window.CurtainModule = (function () {
     }
 
     // Update position
+    // Update position
     function updatePosition(position) {
         if (!currentCurtain) return;
 
+        console.log('Curtain updatePosition called with:', position);
+
+        // Ensure position is a valid number between 0-100
+        const validPosition = Math.max(0, Math.min(100, parseInt(position) || 0));
+
         const button = document.getElementById(currentCurtain.id);
-        const isOpen = position > 0;
+        const isOpen = validPosition > 0;
 
         if (button) {
-            updateCurtainUI(button, position, isOpen);
+            updateCurtainUI(button, validPosition, isOpen);
         }
 
         // Update config
         const index = curtainButtons.findIndex(b => b.id === currentCurtain.id);
         if (index !== -1) {
-            curtainButtons[index].currentPosition = position;
+            curtainButtons[index].currentPosition = validPosition;
             curtainButtons[index].isOpen = isOpen;
         }
 
         // Call callback to update Home Assistant entity
         if (callbacks.updateCurtain) {
-            callbacks.updateCurtain(currentCurtain.entityId, position, currentCurtain.id);
+            callbacks.updateCurtain(currentCurtain.entityId, validPosition, currentCurtain.id);
         }
     }
 
+    // Setup event listeners
     // Setup event listeners
     function setupEventListeners() {
         // Close button
@@ -729,6 +742,59 @@ window.CurtainModule = (function () {
                 const value = parseInt(e.target.value);
                 updatePosition(value);
             });
+
+            // FIXED TOUCH EVENTS for position slider (Curtain) - FIXED: 0 stays 0
+            positionSlider.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                const touch = e.touches[0];
+                const rect = positionSlider.getBoundingClientRect();
+                const relativeY = touch.clientY - rect.top;
+                const percent = relativeY / rect.height;
+
+                // FIX: Use proper calculation - inverted for vertical slider
+                const value = Math.round((1 - percent) * 100); // This gives 0-100
+                const clampedValue = Math.max(0, Math.min(100, value));
+
+                console.log('Curtain touchstart:', {
+                    touchY: touch.clientY,
+                    rectTop: rect.top,
+                    relativeY,
+                    percent,
+                    calculated: value,
+                    clamped: clampedValue
+                });
+
+                // IMPORTANT: Set the value directly without rounding to 50
+                positionSlider.value = clampedValue;
+                if (positionValue) {
+                    positionValue.textContent = `${clampedValue}%`;
+                }
+            }, { passive: false });
+
+            positionSlider.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const touch = e.touches[0];
+                const rect = positionSlider.getBoundingClientRect();
+                const relativeY = touch.clientY - rect.top;
+                const percent = relativeY / rect.height;
+
+                // FIX: Use proper calculation - inverted for vertical slider
+                const value = Math.round((1 - percent) * 100); // This gives 0-100
+                const clampedValue = Math.max(0, Math.min(100, value));
+
+                // IMPORTANT: Set the value directly without rounding to 50
+                positionSlider.value = clampedValue;
+                if (positionValue) {
+                    positionValue.textContent = `${clampedValue}%`;
+                }
+            }, { passive: false });
+
+            positionSlider.addEventListener('touchend', (e) => {
+                const value = parseInt(positionSlider.value);
+                console.log('Curtain touchend - sending value:', value);
+                updatePosition(value);
+            }, { passive: true });
         }
     }
 
@@ -816,7 +882,7 @@ window.CurtainModule = (function () {
                 id: buttonId,
                 entityId: newConfig.entityId,
                 type: 'curtain',
-                handleStateUpdate: function(state, position) {
+                handleStateUpdate: function (state, position) {
                     // This will be called when HA state updates
                 }
             };
@@ -833,12 +899,12 @@ window.CurtainModule = (function () {
         const index = curtainButtons.findIndex(b => b.id === buttonId);
         if (index !== -1) {
             const button = curtainButtons[index];
-            
+
             if (button.entityId && window.EntityButtons?.[button.entityId]) {
-                window.EntityButtons[button.entityId] = 
+                window.EntityButtons[button.entityId] =
                     window.EntityButtons[button.entityId].filter(b => b.id !== buttonId);
             }
-            
+
             curtainButtons.splice(index, 1);
 
             const btn = document.getElementById(buttonId);
@@ -852,7 +918,7 @@ window.CurtainModule = (function () {
     // Handle state update from Home Assistant - THIS IS THE KEY FIX
     function handleStateUpdate(entityId, state, position) {
         console.log('Curtain HA state update:', entityId, 'position:', position);
-        
+
         // Use position from HA, or 0 if not provided
         const currentPosition = typeof position === 'number' ? position : 0;
         const isOpen = currentPosition > 0 || state === 'open';
@@ -866,11 +932,11 @@ window.CurtainModule = (function () {
                 const btn = document.getElementById(config.id);
                 if (btn) {
                     updateCurtainUI(btn, currentPosition, isOpen);
-                    
+
                     // If this curtain's modal is open, update the slider
-                    if (curtainModal && 
+                    if (curtainModal &&
                         curtainModal.style.display === 'flex' &&
-                        currentCurtain && 
+                        currentCurtain &&
                         currentCurtain.entityId === entityId) {
                         if (positionSlider && positionValue) {
                             positionSlider.value = currentPosition;
