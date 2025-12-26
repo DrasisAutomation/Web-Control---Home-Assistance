@@ -770,7 +770,7 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("Applying design:", designData)
 
         function finishLoading() {
-            console.log("Finishing design load...")
+            console.log("Finishing design load.")
 
             // Clear ALL existing buttons first
             clearAllButtons()
@@ -1100,7 +1100,7 @@ document.addEventListener("DOMContentLoaded", () => {
         footer.innerHTML = `
         <span>${text}</span>
         <div style="display: flex; gap: 10px;">
-            <button class="footer-control load-btn" id="loadBtn">📂 Load...</button>
+            <button class="footer-control load-btn" id="loadBtn">📂 Load.</button>
             <button class="footer-control reset-footer-btn" id="footerResetBtn" 
                     style="background: #666; padding: 4px 8px; border-radius: 4px;">
                 ↻
