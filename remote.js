@@ -88,7 +88,7 @@ window.RemoteModule = (() => {
         background: rgba(0, 0, 0, 0.5);
         z-index: 1000;
         justify-content: center;
-        align-items: flex-start; /* Changed from center to flex-start for mobile */
+        align-items:center; /* Changed from center to flex-start for mobile */
         overflow-y: auto; /* Allow modal container to scroll */
         -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
         padding: 20px 10px; /* Add padding for mobile */
@@ -116,7 +116,8 @@ window.RemoteModule = (() => {
       @media (max-width: 768px) {
         .remote-control-modal {
           padding: 10px 5px;
-          align-items: flex-start; /* Align to top for mobile */
+        justify-content: center;
+        align-items:center; /* Align to top for mobile */
         }
         
         .remote-control-content {
