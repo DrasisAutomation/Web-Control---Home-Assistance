@@ -263,7 +263,7 @@ window.CurtainModule = (function () {
         };
     }
 
-    // Create a curtain button - FIXED: Don't set default 50
+    // Create a curtain button - FIXED VERSION
     function create(config) {
         if (!config.id) {
             config.id = 'curtain_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -274,13 +274,12 @@ window.CurtainModule = (function () {
         config.iconClass = config.iconClass || 'curtain1.svg';
         config.name = config.name || 'Curtain';
 
-        // IMPORTANT: Use entity value if provided, otherwise 0 (not 50)
-        // This ensures new curtains start at 0% (fully closed) not 50%
+        // IMPORTANT: Use entity value if provided, otherwise 0
         config.currentPosition = typeof config.currentPosition === 'number'
             ? config.currentPosition
             : 0; // Changed from 50 to 0
 
-        config.isOpen = config.currentPosition > 0;
+        config.isOpen = config.currentPosition > 0; // Correctly set isOpen based on position
         config.position = config.position || { x: 0.5, y: 0.5 };
 
         // Add to array
@@ -339,6 +338,24 @@ window.CurtainModule = (function () {
 
         return button;
     }
+    // Fix existing curtains with position 50
+    function fixExistingCurtains() {
+        curtainButtons.forEach(config => {
+            if (config.currentPosition === 50 && !config.entityId) {
+                // This is likely a default value, set to 0
+                config.currentPosition = 0;
+                config.isOpen = false;
+
+                const btn = document.getElementById(config.id);
+                if (btn) {
+                    updateCurtainUI(btn, 0, false);
+                }
+            }
+        });
+    }
+
+    // Call this after initialization
+    setTimeout(fixExistingCurtains, 1000);
 
     // Setup curtain button events (drag and click)
     function setupCurtainButtonEvents(button, config) {
@@ -615,56 +632,68 @@ window.CurtainModule = (function () {
         }
     }
 
-    // Open curtain modal - FIXED: Always use actual entity value
-    function openCurtainModal(config) {
-        currentCurtain = config;
+// Open curtain modal - UPDATED WITH HARD OVERRIDE
+function openCurtainModal(config) {
+    currentCurtain = config;
 
-        // Get current position from config (which should be updated by handleStateUpdate)
-        let currentPosition = config.currentPosition || 0;
+    // Get current position from config
+    let currentPosition = config.currentPosition || 0;
+    
+    // HARD OVERRIDE - If position is 0, keep it at 0
+    if (currentPosition === 0) {
+        currentPosition = 0;
+    }
+    
+    console.log('Opening curtain modal with hard override - position:', currentPosition);
 
-        console.log('Opening curtain modal for', config.name, 'position from config:', currentPosition);
-
-        // Also check button dataset as backup
-        const button = document.getElementById(config.id);
-        if (button && button.dataset.position) {
-            const buttonPos = parseInt(button.dataset.position, 10);
-            if (!isNaN(buttonPos)) {
-                currentPosition = buttonPos;
-            }
-        }
-
-        // Ensure it's not magically set to 50
-        if (currentPosition === 50 && !config.currentPosition) {
-            currentPosition = 0;
-        }
-
-        // Update modal with actual entity value
-        if (positionSlider && positionValue) {
-            positionSlider.value = currentPosition;
-            positionValue.textContent = `${currentPosition}%`;
-        }
-
-        // Update modal title
-        const modalTitle = document.getElementById('curtainModalTitle');
-        if (modalTitle) {
-            modalTitle.textContent = `${config.name || 'Curtain'} Controls`;
-        }
-
-        // Show modal
-        if (curtainModal) {
-            curtainModal.style.display = 'flex';
-            curtainModal.style.alignItems = 'center';
-            curtainModal.style.justifyContent = 'center';
-        }
-
-        // Request fresh state from HA to ensure we have the latest
-        if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-            window.ws.send(JSON.stringify({
-                id: Date.now(),
-                type: "get_states"
-            }));
+    // Also check button dataset as backup
+    const button = document.getElementById(config.id);
+    if (button && button.dataset.position) {
+        const buttonPos = parseInt(button.dataset.position, 10);
+        if (!isNaN(buttonPos)) {
+            currentPosition = buttonPos;
+            // HARD OVERRIDE AGAIN
+            if (currentPosition === 0) currentPosition = 0;
         }
     }
+
+    // ABSOLUTE HARD OVERRIDE - NEVER use 50 when it should be 0
+    if (currentPosition === 50 && config.currentPosition === 0) {
+        currentPosition = 0;
+        console.log('Hard override: 50 changed to 0');
+    }
+
+    // Update modal with HARD OVERRIDE values
+    if (positionSlider) {
+        positionSlider.value = currentPosition;
+        console.log('Slider initially set to:', currentPosition);
+    }
+    if (positionValue) {
+        positionValue.textContent = `${currentPosition}%`;
+    }
+
+    // Update modal title
+    const modalTitle = document.getElementById('curtainModalTitle');
+    if (modalTitle) {
+        modalTitle.textContent = `${config.name || 'Curtain'} Controls`;
+    }
+
+    // Show modal
+    if (curtainModal) {
+        curtainModal.style.display = 'flex';
+        curtainModal.style.alignItems = 'center';
+        curtainModal.style.justifyContent = 'center';
+    }
+
+    // Request fresh state from HA
+    if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+        window.ws.send(JSON.stringify({
+            id: Date.now(),
+            type: "get_states"
+        }));
+    }
+}
+
 
     // Close curtain modal
     function closeCurtainModal() {
@@ -674,15 +703,15 @@ window.CurtainModule = (function () {
         currentCurtain = null;
     }
 
-    // Update position
-    // Update position
     function updatePosition(position) {
         if (!currentCurtain) return;
 
         console.log('Curtain updatePosition called with:', position);
 
-        // Ensure position is a valid number between 0-100
-        const validPosition = Math.max(0, Math.min(100, parseInt(position) || 0));
+        // HARD OVERRIDE FOR ZERO - If position is 0, force it to stay 0
+        const validPosition = (parseInt(position) === 0) ? 0 : Math.max(0, Math.min(100, parseInt(position) || 0));
+
+        console.log('Hard override - final position:', validPosition);
 
         const button = document.getElementById(currentCurtain.id);
         const isOpen = validPosition > 0;
@@ -698,105 +727,132 @@ window.CurtainModule = (function () {
             curtainButtons[index].isOpen = isOpen;
         }
 
+        // FORCE SLIDER TO MATCH THE VALUE
+        if (positionSlider) {
+            positionSlider.value = validPosition;
+            console.log('Slider forced to:', validPosition);
+        }
+        if (positionValue) {
+            positionValue.textContent = `${validPosition}%`;
+        }
+
         // Call callback to update Home Assistant entity
         if (callbacks.updateCurtain) {
             callbacks.updateCurtain(currentCurtain.entityId, validPosition, currentCurtain.id);
         }
     }
 
-    // Setup event listeners
-    // Setup event listeners
-    function setupEventListeners() {
-        // Close button
-        if (closeCurtainBtn) {
-            closeCurtainBtn.addEventListener('click', closeCurtainModal);
-        }
 
-        // Close on overlay click
-        if (curtainModal) {
-            curtainModal.addEventListener('click', (e) => {
-                if (e.target === curtainModal) {
-                    closeCurtainModal();
-                }
-            });
-        }
+function setupEventListeners() {
+    // Close button
+    if (closeCurtainBtn) {
+        closeCurtainBtn.addEventListener('click', closeCurtainModal);
+    }
 
-        // ESC key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && curtainModal && curtainModal.style.display === 'flex') {
+    // Close on overlay click
+    if (curtainModal) {
+        curtainModal.addEventListener('click', (e) => {
+            if (e.target === curtainModal) {
                 closeCurtainModal();
             }
         });
-
-        // Position slider - update display while dragging
-        if (positionSlider) {
-            positionSlider.addEventListener('input', (e) => {
-                const value = parseInt(e.target.value);
-                if (positionValue) {
-                    positionValue.textContent = `${value}%`;
-                }
-            });
-
-            // Position slider - update when released
-            positionSlider.addEventListener('change', (e) => {
-                const value = parseInt(e.target.value);
-                updatePosition(value);
-            });
-
-            // FIXED TOUCH EVENTS for position slider (Curtain) - FIXED: 0 stays 0
-            positionSlider.addEventListener('touchstart', (e) => {
-                e.stopPropagation();
-                const touch = e.touches[0];
-                const rect = positionSlider.getBoundingClientRect();
-                const relativeY = touch.clientY - rect.top;
-                const percent = relativeY / rect.height;
-
-                // FIX: Use proper calculation - inverted for vertical slider
-                const value = Math.round((1 - percent) * 100); // This gives 0-100
-                const clampedValue = Math.max(0, Math.min(100, value));
-
-                console.log('Curtain touchstart:', {
-                    touchY: touch.clientY,
-                    rectTop: rect.top,
-                    relativeY,
-                    percent,
-                    calculated: value,
-                    clamped: clampedValue
-                });
-
-                // IMPORTANT: Set the value directly without rounding to 50
-                positionSlider.value = clampedValue;
-                if (positionValue) {
-                    positionValue.textContent = `${clampedValue}%`;
-                }
-            }, { passive: false });
-
-            positionSlider.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const touch = e.touches[0];
-                const rect = positionSlider.getBoundingClientRect();
-                const relativeY = touch.clientY - rect.top;
-                const percent = relativeY / rect.height;
-
-                // FIX: Use proper calculation - inverted for vertical slider
-                const value = Math.round((1 - percent) * 100); // This gives 0-100
-                const clampedValue = Math.max(0, Math.min(100, value));
-
-                // IMPORTANT: Set the value directly without rounding to 50
-                positionSlider.value = clampedValue;
-                if (positionValue) {
-                    positionValue.textContent = `${clampedValue}%`;
-                }
-            }, { passive: false });
-
-            positionSlider.addEventListener('touchend', (e) => {
-                const value = parseInt(positionSlider.value);
-                console.log('Curtain touchend - sending value:', value);
-                updatePosition(value);
-            }, { passive: true });
-        }
     }
+
+    // ESC key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && curtainModal && curtainModal.style.display === 'flex') {
+            closeCurtainModal();
+        }
+    });
+
+    // Position slider - update display while dragging WITH HARD OVERRIDE
+    if (positionSlider) {
+        positionSlider.addEventListener('input', (e) => {
+            const rawValue = parseInt(e.target.value);
+            // HARD OVERRIDE - if value is exactly 0, keep it as 0
+            const value = (rawValue === 0) ? 0 : rawValue;
+            
+            if (positionValue) {
+                positionValue.textContent = `${value}%`;
+            }
+            console.log('Slider input - value:', value);
+        });
+
+        // Position slider - update when released WITH HARD OVERRIDE
+        positionSlider.addEventListener('change', (e) => {
+            const rawValue = parseInt(e.target.value);
+            // HARD OVERRIDE - if value is exactly 0, keep it as 0
+            const value = (rawValue === 0) ? 0 : rawValue;
+            
+            console.log('Slider change - calling updatePosition with:', value);
+            updatePosition(value);
+        });
+
+        // FIXED TOUCH EVENTS for position slider WITH HARD OVERRIDE
+        positionSlider.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+            const touch = e.touches[0];
+            const rect = positionSlider.getBoundingClientRect();
+            const relativeY = touch.clientY - rect.top;
+            const percent = relativeY / rect.height;
+
+            // Calculate value
+            const rawValue = Math.round((1 - percent) * 100);
+            // HARD OVERRIDE - if value is exactly 0, keep it as 0
+            const value = (rawValue === 0) ? 0 : Math.max(0, Math.min(100, rawValue));
+
+            console.log('Curtain touchstart - calculated value:', value);
+
+            // Set the actual calculated value with HARD OVERRIDE
+            positionSlider.value = value;
+            if (positionValue) {
+                positionValue.textContent = `${value}%`;
+            }
+        }, { passive: false });
+
+        positionSlider.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const touch = e.touches[0];
+            const rect = positionSlider.getBoundingClientRect();
+            const relativeY = touch.clientY - rect.top;
+            const percent = relativeY / rect.height;
+
+            const rawValue = Math.round((1 - percent) * 100);
+            // HARD OVERRIDE - if value is exactly 0, keep it as 0
+            const value = (rawValue === 0) ? 0 : Math.max(0, Math.min(100, rawValue));
+
+            // Set the actual calculated value with HARD OVERRIDE
+            positionSlider.value = value;
+            if (positionValue) {
+                positionValue.textContent = `${value}%`;
+            }
+        }, { passive: false });
+
+        positionSlider.addEventListener('touchend', (e) => {
+            const rawValue = parseInt(positionSlider.value);
+            // HARD OVERRIDE - if value is exactly 0, keep it as 0
+            const value = (rawValue === 0) ? 0 : rawValue;
+            
+            console.log('Curtain touchend - sending value with override:', value);
+            updatePosition(value);
+        }, { passive: true });
+        
+        // ADD LOAD EVENT TO ENSURE INITIAL VALUE IS CORRECT
+        window.addEventListener('load', function() {
+            if (currentCurtain && positionSlider) {
+                const currentPos = currentCurtain.currentPosition || 0;
+                // HARD OVERRIDE ON LOAD
+                if (currentPos === 0) {
+                    positionSlider.value = 0;
+                    if (positionValue) {
+                        positionValue.textContent = '0%';
+                    }
+                }
+            }
+        });
+    }
+}
 
     // Toggle edit mode
     function enableEditMode(flag) {
@@ -915,17 +971,27 @@ window.CurtainModule = (function () {
         return false;
     }
 
-    // Handle state update from Home Assistant - THIS IS THE KEY FIX
     function handleStateUpdate(entityId, state, position) {
-        console.log('Curtain HA state update:', entityId, 'position:', position);
+        console.log('Curtain HA state update:', entityId, 'position:', position, 'state:', state);
 
-        // Use position from HA, or 0 if not provided
-        const currentPosition = typeof position === 'number' ? position : 0;
-        const isOpen = currentPosition > 0 || state === 'open';
+        // HARD OVERRIDE - If position is 0 or state is 'closed', force position to 0
+        let currentPosition = 0;
+        if (typeof position === 'number') {
+            currentPosition = (position === 0) ? 0 : Math.max(0, Math.min(100, position));
+        }
+
+        // Additional check based on state string
+        if (state === 'closed' || state === 'off') {
+            currentPosition = 0;
+        }
+
+        const isOpen = currentPosition > 0 || state === 'open' || state === 'on';
+
+        console.log('Hard override applied - final position:', currentPosition);
 
         curtainButtons.forEach(config => {
             if (config.entityId === entityId) {
-                // ALWAYS update from HA state
+                // ALWAYS update from HA state with hard override
                 config.currentPosition = currentPosition;
                 config.isOpen = isOpen;
 
@@ -933,13 +999,17 @@ window.CurtainModule = (function () {
                 if (btn) {
                     updateCurtainUI(btn, currentPosition, isOpen);
 
-                    // If this curtain's modal is open, update the slider
+                    // If this curtain's modal is open, update the slider with HARD OVERRIDE
                     if (curtainModal &&
                         curtainModal.style.display === 'flex' &&
                         currentCurtain &&
                         currentCurtain.entityId === entityId) {
-                        if (positionSlider && positionValue) {
+                        if (positionSlider) {
+                            // FORCE the slider to show the actual value (0 if 0)
                             positionSlider.value = currentPosition;
+                            console.log('Modal slider forced to:', currentPosition);
+                        }
+                        if (positionValue) {
                             positionValue.textContent = `${currentPosition}%`;
                         }
                     }

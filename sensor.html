@@ -6,31 +6,34 @@
     <title>Door Sensor with State Configuration</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Center the button */
-        body, html {
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
             width: 100%;
             height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
             background: transparent;
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
         .sensor-button {
-            width: 40px;
-            height: 40px;
-            background-color: white;
-            border-radius: 5px;
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(145deg, #ffffff, #f5f5f5);
+            border-radius: 8px;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            transition: all 0.3s ease;
-            border: 1px solid #ddd;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             padding: 0;
             position: absolute;
             top: 50%;
@@ -40,7 +43,8 @@
         }
 
         .sensor-button:hover {
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            transform: translate(-50%, -50%) scale(1.02);
         }
 
         .sensor-button:disabled {
@@ -60,20 +64,20 @@
         .sensor-button .icon svg {
             width: 100%;
             height: 100%;
-            color: #666;
+            transition: color 0.3s ease;
         }
 
         .sensor-button .status-dot {
             position: absolute;
-            top: 3px;
-            right: 3px;
-            width: 8px;
-            height: 8px;
+            top: 4px;
+            right: 4px;
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
             transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.8);
         }
 
-        /* Modal Styles */
         .modal {
             display: none;
             position: fixed;
@@ -81,383 +85,515 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
             z-index: 1000;
             justify-content: center;
             align-items: center;
+            padding: 12px;
         }
 
         .modal-content {
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 700px;
-            max-height: 90vh;
+            background: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 420px;
+            max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-content::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .modal-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
         }
 
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #eee;
+            margin-bottom: 12px;
             padding-bottom: 10px;
+            border-bottom: 1px solid #e5e7eb;
         }
 
         .modal-title {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #333;
+            font-size: 15px;
+            font-weight: 600;
+            color: #1f2937;
         }
 
         .close-modal {
             background: none;
             border: none;
-            font-size: 1.5rem;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
             cursor: pointer;
-            color: #666;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 18px;
         }
 
         .close-modal:hover {
-            color: #333;
+            background: #f3f4f6;
+            color: #1f2937;
+        }
+
+        .current-state-info {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+            border-radius: 8px;
+            border-left: 3px solid #3b82f6;
+            font-size: 12px;
+        }
+
+        .current-state-info h4 {
+            margin: 0 0 4px 0;
+            color: #1e40af;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .current-state-value {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-weight: 600;
+            color: #1f2937;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 11px;
         }
 
         .config-section {
-            margin-bottom: 25px;
-            padding: 15px;
-            border: 1px solid #eee;
+            margin-bottom: 12px;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
             border-radius: 8px;
-            background-color: #f9f9f9;
+            background: #fafafa;
         }
 
         .config-header {
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #444;
-            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #374151;
+            font-size: 13px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .remove-config {
-            background: #ff4444;
-            color: white;
+            background: #fee2e2;
+            color: #dc2626;
             border: none;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            border-radius: 5px;
             cursor: pointer;
             font-size: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.2s;
         }
 
         .remove-config:hover {
-            background: #cc0000;
+            background: #dc2626;
+            color: white;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
         }
 
         .input-group {
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+        }
+
+        .input-group.half {
+            margin-bottom: 0;
         }
 
         .input-group label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             font-weight: 500;
-            color: #555;
+            color: #4b5563;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
 
-        .input-group input {
-            width: 92%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
+        .input-group input[type="text"] {
+            width: 100%;
+            padding: 7px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: all 0.2s;
+            background: #fff;
         }
 
-        .input-group input:focus {
+        .input-group input[type="text"]:focus {
             outline: none;
-            border-color: #4a90e2;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .preview-area {
             display: flex;
             align-items: center;
-            gap: 15px;
-            margin-top: 10px;
-            padding: 15px;
-            background: white;
+            gap: 10px;
+            padding: 10px;
+            background: #fff;
             border-radius: 6px;
-            border: 1px solid #eee;
+            border: 1px solid #e5e7eb;
+            margin-top: 8px;
         }
 
         .preview-icon {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #fff;
+            transition: all 0.3s ease;
         }
 
         .preview-icon svg {
-            width: 24px;
-            height: 24px;
-            color: #666;
+            width: 20px;
+            height: 20px;
+            transition: color 0.3s ease;
+        }
+
+        .preview-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .preview-label {
+            font-size: 10px;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .preview-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #1f2937;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .preview-glow {
-            width: 40px;
-            height: 40px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
-            border: 2px solid #eee;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            flex-shrink: 0;
         }
 
         .icon-selection {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin-top: 10px;
-            max-height: 200px;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+            max-height: 120px;
             overflow-y: auto;
-            padding: 10px;
-            background: white;
-            border: 1px solid #eee;
+            padding: 8px;
+            background: #fff;
+            border: 1px solid #e5e7eb;
             border-radius: 6px;
         }
 
+        .icon-selection::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .icon-selection::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+
         .icon-option {
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
             border: 2px solid transparent;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
-            background: white;
-            transition: all 0.2s;
+            background: #f9fafb;
+            transition: all 0.15s;
         }
 
         .icon-option:hover {
-            border-color: #4a90e2;
-            background: #f0f7ff;
+            border-color: #3b82f6;
+            background: #eff6ff;
         }
 
         .icon-option.selected {
-            border-color: #4a90e2;
-            background: #e6f2ff;
+            border-color: #3b82f6;
+            background: #dbeafe;
         }
 
         .icon-option svg {
-            width: 24px;
-            height: 24px;
-            color: #666;
+            width: 18px;
+            height: 18px;
+            color: #4b5563;
+        }
+
+        .search-icons {
+            margin-bottom: 6px;
+        }
+
+        .search-icons input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .search-icons input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .color-section {
+            margin-top: 10px;
         }
 
         .color-picker {
             display: flex;
-            gap: 10px;
-            margin-top: 10px;
+            gap: 6px;
             flex-wrap: wrap;
+            align-items: center;
         }
 
         .color-option {
-            width: 30px;
-            height: 30px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
-            border: 2px solid #eee;
+            border: 2px solid transparent;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
         }
 
         .color-option:hover {
-            transform: scale(1.1);
+            transform: scale(1.15);
+            border-color: rgba(0, 0, 0, 0.2);
         }
 
         .color-option.selected {
-            border-color: #333;
-            transform: scale(1.1);
+            border-color: #1f2937;
+            transform: scale(1.15);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .custom-color-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 4px;
+            padding-left: 8px;
+            border-left: 1px solid #e5e7eb;
+        }
+
+        .custom-color-input {
+            position: relative;
+            width: 26px;
+            height: 26px;
+        }
+
+        .custom-color-input input[type="color"] {
+            width: 26px;
+            height: 26px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            padding: 0;
+            background: none;
+        }
+
+        .custom-color-input input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        .custom-color-input input[type="color"]::-webkit-color-swatch {
+            border: 2px solid transparent;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+        }
+
+        .custom-color-input.selected input[type="color"]::-webkit-color-swatch {
+            border-color: #1f2937;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .hex-input {
+            width: 70px;
+            padding: 4px 6px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: 'SF Mono', Monaco, monospace;
+            text-transform: uppercase;
+        }
+
+        .hex-input:focus {
+            outline: none;
+            border-color: #3b82f6;
         }
 
         .modal-actions {
             display: flex;
             justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
+            gap: 8px;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid #e5e7eb;
         }
 
         .btn {
-            padding: 10px 20px;
+            padding: 8px 16px;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: 500;
-            transition: all 0.3s;
+            font-size: 13px;
+            transition: all 0.2s;
         }
 
         .btn-primary {
-            background-color: #4a90e2;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             color: white;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
         }
 
         .btn-primary:hover {
-            background-color: #357ae8;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.4);
         }
 
         .btn-secondary {
-            background-color: #f5f5f5;
-            color: #333;
+            background: #f3f4f6;
+            color: #374151;
         }
 
         .btn-secondary:hover {
-            background-color: #e8e8e8;
+            background: #e5e7eb;
         }
 
         .btn-add {
-            background-color: #34c759;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: white;
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);
         }
 
         .btn-add:hover {
-            background-color: #2daa4c;
-        }
-
-        .icon-preview-text {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-
-        .drag-hint {
-            position: absolute;
-            bottom: -25px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 11px;
-            color: #666;
-            white-space: nowrap;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 2px 8px;
-            border-radius: 10px;
-            border: 1px solid #ddd;
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
         }
 
         .empty-state {
             text-align: center;
-            padding: 30px;
-            color: #666;
+            padding: 24px;
+            color: #6b7280;
+            font-size: 13px;
         }
 
-        .state-value {
-            font-family: monospace;
-            background: #f0f0f0;
-            padding: 2px 6px;
-            border-radius: 3px;
+        .drag-hint {
+            position: absolute;
+            bottom: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #6b7280;
+            white-space: nowrap;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2px 8px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
 
-        .current-state-info {
-            margin-bottom: 20px;
-            padding: 10px;
-            background: #e8f4ff;
-            border-radius: 6px;
-            border-left: 4px solid #4a90e2;
-        }
-
-        .current-state-info h4 {
-            margin: 0 0 5px 0;
-            color: #2c5282;
-        }
-
-        .current-state-value {
-            font-family: monospace;
-            font-weight: bold;
-            color: #2d3748;
-        }
-
-        .config-actions {
+        .section-label {
+            font-size: 11px;
+            color: #6b7280;
+            margin-bottom: 6px;
             display: flex;
-            gap: 10px;
-            margin-top: 10px;
+            align-items: center;
+            gap: 4px;
         }
 
-        .search-icons {
-            margin-bottom: 10px;
-        }
-
-        .search-icons input {
-            width: 92%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .search-icons input:focus {
-            outline: none;
-            border-color: #4a90e2;
+        .section-label i {
+            font-size: 10px;
         }
     </style>
 </head>
 <body>
-    <!-- Sensor Button -->
     <div class="sensor-container">
         <button class="sensor-button" id="sensorBtn" disabled>
-            <div class="icon" id="doorIcon">
-                <!-- SVG icon will be loaded here -->
-            </div>
+            <div class="icon" id="doorIcon"></div>
             <div class="status-dot"></div>
         </button>
         <div class="drag-hint">Drag to move • Hold to configure</div>
     </div>
 
-    <!-- Configuration Modal -->
     <div class="modal" id="configModal">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title">Sensor State Configuration</div>
+                <div class="modal-title">Sensor Configuration</div>
                 <button class="close-modal" id="closeModal">&times;</button>
             </div>
 
             <div class="current-state-info">
-                <h4>Current Sensor State</h4>
-                <div>Entity: <span class="current-state-value" id="currentEntityId">binary_sensor.showroom_door_sensor_window_door_is_open</span></div>
-                <div>Current Value: <span class="current-state-value" id="currentStateValue">Unknown</span></div>
-                <div>Configure which icon and glow color to show when the sensor state matches a specific value.</div>
+                <h4><i class="fas fa-info-circle"></i> Current State</h4>
+                <div>Entity: <span class="current-state-value" id="currentEntityId">binary_sensor.door</span></div>
+                <div>Value: <span class="current-state-value" id="currentStateValue">Unknown</span></div>
             </div>
 
-            <!-- State Configurations Container -->
             <div id="stateConfigsContainer">
-                <!-- State configurations will be added here dynamically -->
-                <div class="empty-state" id="emptyState">
-                    No state configurations yet. Click "Add State Configuration" to get started.
-                </div>
+                <div class="empty-state" id="emptyState">No configurations yet. Add one to get started.</div>
             </div>
 
-            <button class="btn btn-add" id="addStateBtn">
-                <i class="fas fa-plus"></i> Add State Configuration
-            </button>
+            <button class="btn btn-add" id="addStateBtn"><i class="fas fa-plus"></i> Add State Configuration</button>
 
             <div class="modal-actions">
                 <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
-                <button class="btn btn-primary" id="saveBtn">Save Configuration</button>
+                <button class="btn btn-primary" id="saveBtn">Save</button>
             </div>
         </div>
     </div>
 
 <script>
-// Configuration
 const SVG_PATH = './src/svg/';
 let stateConfigurations = [];
 let allIcons = [];
@@ -466,36 +602,19 @@ let longPressTimer;
 let isDragging = false;
 let isLongPress = false;
 
-// Default configuration for common sensor states
 const DEFAULT_CONFIGS = [
-    {
-        stateValue: 'on',
-        displayName: 'Door Open',
-        icon: 'door-opened.svg',
-        color: '#ff3333'
-    },
-    {
-        stateValue: 'off',
-        displayName: 'Door Closed',
-        icon: 'door-closed.svg',
-        color: '#33cc33'
-    },
-    {
-        stateValue: 'unknown',
-        displayName: 'Unknown',
-        icon: 'alarm.svg',
-        color: '#ffcc00'
-    }
+    { stateValue: 'on', displayName: 'Door Open', icon: 'door-opened.svg', color: '#ef4444' },
+    { stateValue: 'off', displayName: 'Door Closed', icon: 'door-closed.svg', color: '#22c55e' },
+    { stateValue: 'unknown', displayName: 'Unknown', icon: 'alarm.svg', color: '#f59e0b' }
 ];
 
-// Available colors for glow
 const AVAILABLE_COLORS = [
-    '#ff3333', '#33cc33', '#ffcc00', '#4a90e2', '#9b59b6',
-    '#e74c3c', '#2ecc71', '#f39c12', '#3498db', '#8e44ad',
-    '#1abc9c', '#d35400', '#2c3e50', '#7f8c8d'
+    '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+    '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+    '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
+    '#ec4899', '#f43f5e'
 ];
 
-// WebSocket configuration
 const WS_URL = "wss://demo.lumihomepro1.com/api/websocket";
 const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzNGNlNThiNDk1Nzk0NDVmYjUxNzE2NDA0N2Q0MGNmZCIsImlhdCI6MTc2NTM0NzQ5MSwiZXhwIjoyMDgwNzA3NDkxfQ.Se5PGwx0U9aqyVRnD1uwvCv3F-aOE8H53CKA5TqsV7U";
 const DOOR_SENSOR_ENTITY = "binary_sensor.showroom_door_sensor_window_door_is_open";
@@ -506,686 +625,340 @@ const doorIcon = document.getElementById('doorIcon');
 const configModal = document.getElementById('configModal');
 const currentStateValue = document.getElementById('currentStateValue');
 
-// Load all available icons
 async function loadAvailableIcons() {
-    const iconFiles = [
-        'ac-1.svg', 'ac-2.svg', 'ac-3.svg',
-        'alarm.svg', 'person-fall-1.svg', 'person-fall-2.svg', 'walk-1.svg',
-        'sensor-presence1.svg', 'sensor-presense.svg',
-        'arrow-up.svg', 'arrow-up1.svg', 'arrow-up2.svg',
-        'arrow-down.svg', 'arrow-down1.svg', 'arrow-down2.svg',
-        'arrow-left.svg', 'arrow-left1.svg', 'arrow-left2.svg',
-        'arrow-right.svg', 'arrow-right1.svg', 'arrow-right2.svg',
-        'back.svg', 'exit.svg', 'home.svg', 'menu1.svg', 'menu2.svg',
-        'ok.svg', 'navigate.svg', 'reload.svg', 'power.svg',
-        'setting1.svg', 'setting2.svg', 'info.svg',
-        'light-bulb-1.svg', 'light-bulb-2.svg', 'light-bulb-3.svg', 'light-bulb-4.svg',
-        'ceiling-light.svg', 'table-light-1.svg', 'table-light-2.svg',
-        'chandelier-1.svg', 'chandelier-2.svg', 'chandelier-3.svg',
-        'candle.svg', 'dimmer.svg', 'dimmer-1.svg', 'dimmer-3.svg',
-        'fan.svg', 'climate.svg',
-        'door-opened.svg', 'door-closed.svg',
-        'curtain1.svg', 'curtain2.svg', 'blind.svg',
-        'lock.svg', 'lock-open.svg', 'camera.svg',
-        'tv.svg', 'tv2.svg', 'remote.svg', 'remote2.svg', 'remote4.svg',
-        'projector.svg', 'hdmi.svg', 'cast.svg',
-        'play.svg', 'pause.svg', 'stop.svg', 'mute.svg',
-        'volume-up.svg', 'volume-down.svg', 'volume-min.svg', 'volume-max.svg',
-        'skip-forward1.svg', 'skip-forward2.svg',
-        'skip-backward1.svg', 'skip-backward2.svg',
-        'youtube.svg', 'netflix.svg', 'prime.svg', 'hotstar.svg', 'kodi.svg',
-        'wifi-on.svg', 'wifi-off.svg', 'bluetooth.svg', 'signal.svg', 'satellite.svg',
-        'printer1.svg', 'printer2.svg', 'presentation.svg',
-        'file-search.svg', 'data.svg', 'human.svg', 'drop.svg',
-        'cross.svg', 'minus.svg', 'remove3.svg', 'source.svg',
+    allIcons = [
+        'ac-1.svg', 'ac-2.svg', 'ac-3.svg', 'alarm.svg', 'person-fall-1.svg', 'person-fall-2.svg', 'walk-1.svg',
+        'sensor-presence1.svg', 'sensor-presense.svg', 'arrow-up.svg', 'arrow-up1.svg', 'arrow-up2.svg',
+        'arrow-down.svg', 'arrow-down1.svg', 'arrow-down2.svg', 'arrow-left.svg', 'arrow-left1.svg', 'arrow-left2.svg',
+        'arrow-right.svg', 'arrow-right1.svg', 'arrow-right2.svg', 'back.svg', 'exit.svg', 'home.svg', 'menu1.svg', 'menu2.svg',
+        'ok.svg', 'navigate.svg', 'reload.svg', 'power.svg', 'setting1.svg', 'setting2.svg', 'info.svg',
+        'light-bulb-1.svg', 'light-bulb-2.svg', 'light-bulb-3.svg', 'light-bulb-4.svg', 'ceiling-light.svg', 'table-light-1.svg', 'table-light-2.svg',
+        'chandelier-1.svg', 'chandelier-2.svg', 'chandelier-3.svg', 'candle.svg', 'dimmer.svg', 'dimmer-1.svg', 'dimmer-3.svg',
+        'fan.svg', 'climate.svg', 'door-opened.svg', 'door-closed.svg', 'curtain1.svg', 'curtain2.svg', 'blind.svg',
+        'lock.svg', 'lock-open.svg', 'camera.svg', 'tv.svg', 'tv2.svg', 'remote.svg', 'remote2.svg', 'remote4.svg',
+        'projector.svg', 'hdmi.svg', 'cast.svg', 'play.svg', 'pause.svg', 'stop.svg', 'mute.svg',
+        'volume-up.svg', 'volume-down.svg', 'volume-min.svg', 'volume-max.svg', 'skip-forward1.svg', 'skip-forward2.svg',
+        'skip-backward1.svg', 'skip-backward2.svg', 'youtube.svg', 'netflix.svg', 'prime.svg', 'hotstar.svg', 'kodi.svg',
+        'wifi-on.svg', 'wifi-off.svg', 'bluetooth.svg', 'signal.svg', 'satellite.svg', 'printer1.svg', 'printer2.svg', 'presentation.svg',
+        'file-search.svg', 'data.svg', 'human.svg', 'drop.svg', 'cross.svg', 'minus.svg', 'remove3.svg', 'source.svg',
         'vibrate-on.svg', 'vibrate-off.svg', 'film.svg', 'movie.svg'
     ];
-
-    allIcons = iconFiles;
-    console.log(`Loaded ${allIcons.length} available icons`);
 }
 
-// Load SVG icon
 async function loadSVGIcon(iconName) {
-    if (iconCache.has(iconName)) {
-        return iconCache.get(iconName);
-    }
-
+    if (iconCache.has(iconName)) return iconCache.get(iconName);
     try {
         const response = await fetch(`${SVG_PATH}${iconName}`);
-        if (!response.ok) {
-            console.warn(`SVG icon not found: ${iconName}`);
-            return null;
-        }
-
+        if (!response.ok) return null;
         const svgText = await response.text();
         iconCache.set(iconName, svgText);
         return svgText;
-    } catch (error) {
-        console.error('Error loading SVG icon:', iconName, error);
-        return null;
-    }
+    } catch (error) { return null; }
 }
 
-// Make the button draggable
 function makeButtonDraggable(btn) {
     let isDrag = false, startX, startY, origX, origY;
-
     btn.addEventListener("mousedown", e => {
-        // Start long press timer
-        longPressTimer = setTimeout(() => {
-            isLongPress = true;
-            openConfigModal();
-        }, 800); // 800ms for long press
-
-        isDrag = false; // Will be set to true on mousemove
-        startX = e.clientX;
-        startY = e.clientY;
-        origX = btn.offsetLeft;
-        origY = btn.offsetTop;
-        e.stopPropagation();
+        longPressTimer = setTimeout(() => { isLongPress = true; openConfigModal(); }, 800);
+        isDrag = false; startX = e.clientX; startY = e.clientY; origX = btn.offsetLeft; origY = btn.offsetTop;
     });
-
     window.addEventListener("mousemove", e => {
-        if (!longPressTimer) return;
-        
-        let dx = Math.abs(e.clientX - startX);
-        let dy = Math.abs(e.clientY - startY);
-        
-        // If moved more than 5 pixels, consider it dragging
-        if (dx > 5 || dy > 5) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
-            isLongPress = false;
-            
-            // Start dragging
-            isDrag = true;
+        if (!longPressTimer && !isDrag) return;
+        if (Math.abs(e.clientX - startX) > 5 || Math.abs(e.clientY - startY) > 5) {
+            clearTimeout(longPressTimer); longPressTimer = null; isLongPress = false; isDrag = true;
             btn.style.cursor = "grabbing";
-            let moveX = e.clientX - startX;
-            let moveY = e.clientY - startY;
-            btn.style.left = (origX + moveX) + "px";
-            btn.style.top = (origY + moveY) + "px";
+            btn.style.left = (origX + e.clientX - startX) + "px";
+            btn.style.top = (origY + e.clientY - startY) + "px";
         }
     });
-
     window.addEventListener("mouseup", () => {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-        
-        if (isDrag) {
-            isDrag = false;
-            btn.style.cursor = "pointer";
-        }
-        
-        // If it was a long press without dragging, open modal
-        if (isLongPress && !isDrag) {
-            openConfigModal();
-        }
+        clearTimeout(longPressTimer); longPressTimer = null;
+        if (isDrag) { isDrag = false; btn.style.cursor = "pointer"; }
+        if (isLongPress && !isDrag) openConfigModal();
         isLongPress = false;
     });
-
-    // Touch support
     btn.addEventListener("touchstart", e => {
-        e.preventDefault();
-        const touch = e.touches[0];
-        longPressTimer = setTimeout(() => {
-            isLongPress = true;
-            openConfigModal();
-        }, 800);
-        
-        startX = touch.clientX;
-        startY = touch.clientY;
-        origX = btn.offsetLeft;
-        origY = btn.offsetTop;
+        e.preventDefault(); const touch = e.touches[0];
+        longPressTimer = setTimeout(() => { isLongPress = true; openConfigModal(); }, 800);
+        startX = touch.clientX; startY = touch.clientY; origX = btn.offsetLeft; origY = btn.offsetTop;
     });
-
     btn.addEventListener("touchmove", e => {
-        if (!longPressTimer) return;
-        
-        const touch = e.touches[0];
-        let dx = Math.abs(touch.clientX - startX);
-        let dy = Math.abs(touch.clientY - startY);
-        
-        if (dx > 10 || dy > 10) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
-            isLongPress = false;
-            
-            isDrag = true;
-            let moveX = touch.clientX - startX;
-            let moveY = touch.clientY - startY;
-            btn.style.left = (origX + moveX) + "px";
-            btn.style.top = (origY + moveY) + "px";
+        if (!longPressTimer) return; const touch = e.touches[0];
+        if (Math.abs(touch.clientX - startX) > 10 || Math.abs(touch.clientY - startY) > 10) {
+            clearTimeout(longPressTimer); longPressTimer = null; isLongPress = false; isDrag = true;
+            btn.style.left = (origX + touch.clientX - startX) + "px";
+            btn.style.top = (origY + touch.clientY - startY) + "px";
         }
     });
-
     btn.addEventListener("touchend", () => {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-        
-        if (isLongPress && !isDrag) {
-            openConfigModal();
-        }
-        isLongPress = false;
-        isDrag = false;
+        clearTimeout(longPressTimer); longPressTimer = null;
+        if (isLongPress && !isDrag) openConfigModal();
+        isLongPress = false; isDrag = false;
     });
 }
 
-// Open configuration modal
-function openConfigModal() {
-    configModal.style.display = 'flex';
-    loadStateConfigurations();
-}
+function openConfigModal() { configModal.style.display = 'flex'; loadStateConfigurations(); }
+function closeConfigModal() { configModal.style.display = 'none'; }
 
-// Close configuration modal
-function closeConfigModal() {
-    configModal.style.display = 'none';
-}
-
-// Create state configuration HTML
 function createStateConfigHTML(config, index) {
     const container = document.createElement('div');
     container.className = 'config-section';
     container.dataset.index = index;
-    
     const configId = `config-${index}`;
+    const isPresetColor = AVAILABLE_COLORS.includes(config.color);
     
     container.innerHTML = `
-        <div class="config-header">
-            <span>State Configuration ${index + 1}</span>
-            <button class="remove-config" onclick="removeStateConfig(${index})">&times;</button>
+        <div class="config-header"><span>State ${index + 1}</span><button class="remove-config" onclick="removeStateConfig(${index})">&times;</button></div>
+        <div class="input-row">
+            <div class="input-group half"><label>State Value</label><input type="text" id="${configId}-state" value="${config.stateValue}" placeholder="on, off, etc." oninput="updateStateConfigPreview(${index})"></div>
+            <div class="input-group half"><label>Display Name</label><input type="text" id="${configId}-name" value="${config.displayName}" placeholder="Door Open" oninput="updateStateConfigPreview(${index})"></div>
         </div>
-        
-        <div class="input-group">
-            <label for="${configId}-state">Sensor State Value</label>
-            <input type="text" id="${configId}-state" value="${config.stateValue}" 
-                   placeholder="e.g., 'on', 'off', 'open', 'closed'" 
-                   oninput="updateStateConfigPreview(${index})">
-        </div>
-        
-        <div class="input-group">
-            <label for="${configId}-name">Display Name</label>
-            <input type="text" id="${configId}-name" value="${config.displayName}" 
-                   placeholder="e.g., Door Open" 
-                   oninput="updateStateConfigPreview(${index})">
-        </div>
-        
-        <div class="input-group">
-            <label>Icon Selection</label>
-            <div class="search-icons">
-                <input type="text" placeholder="Search icons..." 
-                       oninput="filterIcons(this.value, ${index})">
-            </div>
-            <div class="icon-selection" id="${configId}-icons">
-                <!-- Icons will be populated here -->
-            </div>
-            <div class="icon-preview-text">Click an icon to select it</div>
-        </div>
-        
-        <div class="input-group">
-            <label>Glow Color</label>
+        <div class="input-group"><label><i class="fas fa-icons"></i> Icon</label><div class="search-icons"><input type="text" placeholder="Search icons..." oninput="filterIcons(this.value, ${index})"></div><div class="icon-selection" id="${configId}-icons"></div></div>
+        <div class="color-section"><label class="section-label"><i class="fas fa-palette"></i> Color (Icon & Glow)</label>
             <div class="color-picker" id="${configId}-colors">
-                <!-- Colors will be populated here -->
+                <div class="custom-color-wrapper">
+                    <div class="custom-color-input ${!isPresetColor ? 'selected' : ''}" id="${configId}-custom-picker"><input type="color" id="${configId}-colorPicker" value="${config.color}" onchange="selectCustomColor(${index}, this.value)" oninput="selectCustomColor(${index}, this.value)"></div>
+                    <input type="text" class="hex-input" id="${configId}-hexInput" value="${config.color}" placeholder="#000000" onchange="setHexColor(${index}, this.value)">
+                </div>
             </div>
         </div>
-        
-        <div class="preview-area">
-            <div class="preview-icon" id="${configId}-iconPreview">
-                <!-- Icon preview -->
-            </div>
-            <div>
-                <div>Preview:</div>
-                <div id="${configId}-previewName">${config.displayName}</div>
-            </div>
-            <div class="preview-glow" id="${configId}-colorPreview" style="background-color: ${config.color};"></div>
-        </div>
-    `;
-    
+        <div class="preview-area"><div class="preview-icon" id="${configId}-iconPreview" style="box-shadow: 0 0 12px ${config.color}40;"></div><div class="preview-info"><div class="preview-label">Preview</div><div class="preview-name" id="${configId}-previewName">${config.displayName || 'Untitled'}</div></div><div class="preview-glow" id="${configId}-colorPreview" style="background-color: ${config.color}; box-shadow: 0 0 12px ${config.color};"></div></div>`;
     return container;
 }
 
-// Populate icons for a configuration
+function selectCustomColor(configIndex, color) {
+    const configId = `config-${configIndex}`;
+    document.getElementById(`${configId}-colors`).querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+    document.getElementById(`${configId}-custom-picker`).classList.add('selected');
+    document.getElementById(`${configId}-hexInput`).value = color;
+    stateConfigurations[configIndex].color = color;
+    updateStateConfigPreview(configIndex);
+}
+
+function setHexColor(configIndex, hex) {
+    if (!/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex)) {
+        if (hex.length === 6 && /^[A-Fa-f0-9]{6}$/.test(hex)) hex = '#' + hex; else return;
+    }
+    const configId = `config-${configIndex}`;
+    document.getElementById(`${configId}-colorPicker`).value = hex;
+    document.getElementById(`${configId}-hexInput`).value = hex;
+    selectCustomColor(configIndex, hex);
+}
+
 async function populateIconsForConfig(configIndex) {
     const configId = `config-${configIndex}`;
     const iconsContainer = document.getElementById(`${configId}-icons`);
     if (!iconsContainer) return;
-    
     iconsContainer.innerHTML = '';
-    
+    const currentColor = stateConfigurations[configIndex].color;
     for (const iconName of allIcons) {
         const svgContent = await loadSVGIcon(iconName);
         if (!svgContent) continue;
-        
         const iconOption = document.createElement('div');
         iconOption.className = 'icon-option';
-        if (stateConfigurations[configIndex].icon === iconName) {
-            iconOption.classList.add('selected');
-        }
-        
+        if (stateConfigurations[configIndex].icon === iconName) iconOption.classList.add('selected');
         iconOption.innerHTML = svgContent;
+        const svg = iconOption.querySelector('svg');
+        if (svg) svg.style.color = stateConfigurations[configIndex].icon === iconName ? currentColor : '#4b5563';
         iconOption.addEventListener('click', () => {
-            // Remove selected class from all options
-            iconsContainer.querySelectorAll('.icon-option').forEach(opt => {
-                opt.classList.remove('selected');
-            });
-            
-            // Add selected class to clicked option
-            iconOption.classList.add('selected');
-            
-            // Update configuration
+            iconsContainer.querySelectorAll('.icon-option').forEach(opt => { opt.classList.remove('selected'); const s = opt.querySelector('svg'); if (s) s.style.color = '#4b5563'; });
+            iconOption.classList.add('selected'); if (svg) svg.style.color = currentColor;
             stateConfigurations[configIndex].icon = iconName;
-            updateStateConfigPreview(configIndex);
-            updateIconPreview(configIndex, svgContent);
+            updateStateConfigPreview(configIndex); updateIconPreview(configIndex, svgContent);
         });
-        
         iconsContainer.appendChild(iconOption);
     }
 }
 
-// Filter icons based on search
 async function filterIcons(searchTerm, configIndex) {
     const configId = `config-${configIndex}`;
     const iconsContainer = document.getElementById(`${configId}-icons`);
     if (!iconsContainer) return;
-    
     iconsContainer.innerHTML = '';
-    
-    const filteredIcons = allIcons.filter(iconName => 
-        iconName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    
+    const currentColor = stateConfigurations[configIndex].color;
+    const filteredIcons = allIcons.filter(n => n.toLowerCase().includes(searchTerm.toLowerCase()));
     for (const iconName of filteredIcons) {
         const svgContent = await loadSVGIcon(iconName);
         if (!svgContent) continue;
-        
         const iconOption = document.createElement('div');
         iconOption.className = 'icon-option';
-        if (stateConfigurations[configIndex].icon === iconName) {
-            iconOption.classList.add('selected');
-        }
-        
+        if (stateConfigurations[configIndex].icon === iconName) iconOption.classList.add('selected');
         iconOption.innerHTML = svgContent;
+        const svg = iconOption.querySelector('svg');
+        if (svg) svg.style.color = stateConfigurations[configIndex].icon === iconName ? currentColor : '#4b5563';
         iconOption.addEventListener('click', () => {
-            // Remove selected class from all options
-            iconsContainer.querySelectorAll('.icon-option').forEach(opt => {
-                opt.classList.remove('selected');
-            });
-            
-            // Add selected class to clicked option
-            iconOption.classList.add('selected');
-            
-            // Update configuration
+            iconsContainer.querySelectorAll('.icon-option').forEach(opt => { opt.classList.remove('selected'); const s = opt.querySelector('svg'); if (s) s.style.color = '#4b5563'; });
+            iconOption.classList.add('selected'); if (svg) svg.style.color = currentColor;
             stateConfigurations[configIndex].icon = iconName;
-            updateStateConfigPreview(configIndex);
-            updateIconPreview(configIndex, svgContent);
+            updateStateConfigPreview(configIndex); updateIconPreview(configIndex, svgContent);
         });
-        
         iconsContainer.appendChild(iconOption);
     }
 }
 
-// Populate colors for a configuration
 function populateColorsForConfig(configIndex) {
     const configId = `config-${configIndex}`;
     const colorsContainer = document.getElementById(`${configId}-colors`);
     if (!colorsContainer) return;
-    
-    colorsContainer.innerHTML = '';
-    
+    const customWrapper = colorsContainer.querySelector('.custom-color-wrapper');
     AVAILABLE_COLORS.forEach(color => {
         const colorOption = document.createElement('div');
         colorOption.className = 'color-option';
         colorOption.style.backgroundColor = color;
-        
         if (stateConfigurations[configIndex].color === color) {
             colorOption.classList.add('selected');
+            const cp = document.getElementById(`${configId}-custom-picker`);
+            if (cp) cp.classList.remove('selected');
         }
-        
         colorOption.addEventListener('click', () => {
-            // Remove selected class from all options
-            colorsContainer.querySelectorAll('.color-option').forEach(opt => {
-                opt.classList.remove('selected');
-            });
-            
-            // Add selected class to clicked option
+            colorsContainer.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+            const cp = document.getElementById(`${configId}-custom-picker`);
+            if (cp) cp.classList.remove('selected');
             colorOption.classList.add('selected');
-            
-            // Update configuration
             stateConfigurations[configIndex].color = color;
-            updateStateConfigPreview(configIndex);
+            const hi = document.getElementById(`${configId}-hexInput`), cpk = document.getElementById(`${configId}-colorPicker`);
+            if (hi) hi.value = color; if (cpk) cpk.value = color;
+            updateStateConfigPreview(configIndex); updateIconColorsInSelection(configIndex);
         });
-        
-        colorsContainer.appendChild(colorOption);
+        colorsContainer.insertBefore(colorOption, customWrapper);
     });
 }
 
-// Update icon preview
+function updateIconColorsInSelection(configIndex) {
+    const iconsContainer = document.getElementById(`config-${configIndex}-icons`);
+    const currentColor = stateConfigurations[configIndex].color;
+    if (iconsContainer) iconsContainer.querySelectorAll('.icon-option.selected svg').forEach(svg => { svg.style.color = currentColor; });
+}
+
 function updateIconPreview(configIndex, svgContent) {
     const configId = `config-${configIndex}`;
     const iconPreview = document.getElementById(`${configId}-iconPreview`);
+    const currentColor = stateConfigurations[configIndex].color;
     if (iconPreview && svgContent) {
         iconPreview.innerHTML = svgContent;
+        iconPreview.style.boxShadow = `0 0 12px ${currentColor}40`;
         const svg = iconPreview.querySelector('svg');
-        if (svg) {
-            svg.style.width = '24px';
-            svg.style.height = '24px';
-            svg.style.color = '#666';
-        }
+        if (svg) { svg.style.width = '20px'; svg.style.height = '20px'; svg.style.color = currentColor; }
     }
 }
 
-// Update state configuration preview
 async function updateStateConfigPreview(configIndex) {
     const config = stateConfigurations[configIndex];
     if (!config) return;
-    
     const configId = `config-${configIndex}`;
-    
-    // Update state value and display name
     config.stateValue = document.getElementById(`${configId}-state`)?.value || config.stateValue;
     config.displayName = document.getElementById(`${configId}-name`)?.value || config.displayName;
-    
-    // Update preview name
-    const previewName = document.getElementById(`${configId}-previewName`);
-    if (previewName) {
-        previewName.textContent = config.displayName;
-    }
-    
-    // Update color preview
-    const colorPreview = document.getElementById(`${configId}-colorPreview`);
-    if (colorPreview) {
-        colorPreview.style.backgroundColor = config.color;
-    }
-    
-    // Update icon preview if icon is set
-    if (config.icon) {
-        const svgContent = await loadSVGIcon(config.icon);
-        if (svgContent) {
-            updateIconPreview(configIndex, svgContent);
-        }
-    }
+    const pn = document.getElementById(`${configId}-previewName`);
+    if (pn) pn.textContent = config.displayName || 'Untitled';
+    const cp = document.getElementById(`${configId}-colorPreview`);
+    if (cp) { cp.style.backgroundColor = config.color; cp.style.boxShadow = `0 0 12px ${config.color}`; }
+    const ip = document.getElementById(`${configId}-iconPreview`);
+    if (ip) { ip.style.boxShadow = `0 0 12px ${config.color}40`; const svg = ip.querySelector('svg'); if (svg) svg.style.color = config.color; }
+    updateIconColorsInSelection(configIndex);
+    if (config.icon) { const svgContent = await loadSVGIcon(config.icon); if (svgContent) updateIconPreview(configIndex, svgContent); }
 }
 
-// Add new state configuration
 function addStateConfig() {
-    const newConfig = {
-        stateValue: '',
-        displayName: '',
-        icon: '',
-        color: AVAILABLE_COLORS[0]
-    };
-    
-    stateConfigurations.push(newConfig);
+    stateConfigurations.push({ stateValue: '', displayName: '', icon: '', color: AVAILABLE_COLORS[0] });
     loadStateConfigurations();
-    
-    // Scroll to the new configuration
-    setTimeout(() => {
-        const container = document.getElementById('stateConfigsContainer');
-        if (container.lastChild) {
-            container.lastChild.scrollIntoView({ behavior: 'smooth' });
-        }
-    }, 100);
+    setTimeout(() => { const c = document.getElementById('stateConfigsContainer'); if (c.lastChild) c.lastChild.scrollIntoView({ behavior: 'smooth' }); }, 100);
 }
 
-// Remove state configuration
 function removeStateConfig(index) {
-    if (stateConfigurations.length <= 1) {
-        alert('You must have at least one state configuration');
-        return;
-    }
-    
-    if (confirm('Are you sure you want to remove this state configuration?')) {
-        stateConfigurations.splice(index, 1);
-        loadStateConfigurations();
-    }
+    if (stateConfigurations.length <= 1) { alert('You must have at least one state configuration'); return; }
+    if (confirm('Remove this configuration?')) { stateConfigurations.splice(index, 1); loadStateConfigurations(); }
 }
 
-// Load all state configurations into modal
 async function loadStateConfigurations() {
     const container = document.getElementById('stateConfigsContainer');
-    const emptyState = document.getElementById('emptyState');
-    
-    if (stateConfigurations.length === 0) {
-        container.innerHTML = '<div class="empty-state" id="emptyState">No state configurations yet. Click "Add State Configuration" to get started.</div>';
-        return;
-    }
-    
-    // Remove empty state message
-    if (emptyState) {
-        emptyState.remove();
-    }
-    
+    if (stateConfigurations.length === 0) { container.innerHTML = '<div class="empty-state">No configurations yet. Add one to get started.</div>'; return; }
     container.innerHTML = '';
-    
-    // Create configuration sections
     for (let i = 0; i < stateConfigurations.length; i++) {
         const config = stateConfigurations[i];
-        const configElement = createStateConfigHTML(config, i);
-        container.appendChild(configElement);
-        
-        // Populate icons and colors
+        container.appendChild(createStateConfigHTML(config, i));
         await populateIconsForConfig(i);
         populateColorsForConfig(i);
-        
-        // Load initial icon preview
-        if (config.icon) {
-            const svgContent = await loadSVGIcon(config.icon);
-            if (svgContent) {
-                updateIconPreview(i, svgContent);
-            }
-        }
+        if (config.icon) { const svgContent = await loadSVGIcon(config.icon); if (svgContent) updateIconPreview(i, svgContent); }
     }
 }
 
-// Save configurations to localStorage
 function saveConfigurations() {
     try {
-        // Validate configurations
-        const validConfigs = stateConfigurations.filter(config => 
-            config.stateValue && config.stateValue.trim() !== '' &&
-            config.icon && config.icon.trim() !== ''
-        );
-        
-        if (validConfigs.length === 0) {
-            alert('Please configure at least one state with a value and icon');
-            return;
-        }
-        
-        // Check for duplicate state values
-        const stateValues = validConfigs.map(config => config.stateValue.toLowerCase().trim());
-        const uniqueValues = new Set(stateValues);
-        if (uniqueValues.size !== stateValues.length) {
-            alert('Duplicate state values found. Each state value must be unique.');
-            return;
-        }
-        
-        // Save to localStorage
+        const validConfigs = stateConfigurations.filter(c => c.stateValue?.trim() && c.icon?.trim());
+        if (validConfigs.length === 0) { alert('Please configure at least one state with a value and icon'); return; }
+        const stateValues = validConfigs.map(c => c.stateValue.toLowerCase().trim());
+        if (new Set(stateValues).size !== stateValues.length) { alert('Duplicate state values found'); return; }
         localStorage.setItem('sensorStateConfigs', JSON.stringify(validConfigs));
-        
-        // Update current configuration
         stateConfigurations = validConfigs;
-        
-        // Update sensor button based on current state
         updateSensorButton();
-        
         closeConfigModal();
-        alert('Configuration saved successfully!');
-    } catch (error) {
-        console.error('Error saving configurations:', error);
-        alert('Error saving configurations. Please check the console for details.');
-    }
+    } catch (error) { console.error('Error saving:', error); }
 }
 
-// Load configurations from localStorage
 function loadSavedConfigurations() {
-    try {
-        const saved = localStorage.getItem('sensorStateConfigs');
-        if (saved) {
-            stateConfigurations = JSON.parse(saved);
-        } else {
-            // Use default configurations
-            stateConfigurations = JSON.parse(JSON.stringify(DEFAULT_CONFIGS));
-        }
-    } catch (error) {
-        console.error('Error loading saved configurations:', error);
-        stateConfigurations = JSON.parse(JSON.stringify(DEFAULT_CONFIGS));
-    }
+    try { const saved = localStorage.getItem('sensorStateConfigs'); stateConfigurations = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_CONFIGS)); }
+    catch (error) { stateConfigurations = JSON.parse(JSON.stringify(DEFAULT_CONFIGS)); }
 }
 
-// Update sensor button based on current state
 async function updateSensorButton() {
-    if (!currentSensorState || stateConfigurations.length === 0) {
-        return;
-    }
-    
-    // Find matching configuration for current state
+    if (!currentSensorState || stateConfigurations.length === 0) return;
     const stateStr = String(currentSensorState).toLowerCase().trim();
-    const matchingConfig = stateConfigurations.find(config => 
-        config.stateValue.toLowerCase().trim() === stateStr
-    );
-    
+    const matchingConfig = stateConfigurations.find(c => c.stateValue.toLowerCase().trim() === stateStr);
     if (matchingConfig) {
-        // Clear current icon
         doorIcon.innerHTML = '';
-        
-        // Load and set the icon
         const svgContent = await loadSVGIcon(matchingConfig.icon);
         if (svgContent) {
             doorIcon.innerHTML = svgContent;
             const svg = doorIcon.querySelector('svg');
-            if (svg) {
-                svg.style.width = '24px';
-                svg.style.height = '24px';
-                svg.style.color = '#666';
-            }
+            if (svg) { svg.style.width = '24px'; svg.style.height = '24px'; svg.style.color = matchingConfig.color; }
         }
-        
-        // Set glow color
-        sensorBtn.style.boxShadow = `0 0 15px ${matchingConfig.color}`;
-        
-        // Update status dot
+        sensorBtn.style.boxShadow = `0 0 15px ${matchingConfig.color}, 0 2px 8px rgba(0,0,0,0.08)`;
         const statusDot = sensorBtn.querySelector('.status-dot');
-        if (statusDot) {
-            statusDot.style.backgroundColor = matchingConfig.color;
-            statusDot.style.boxShadow = `0 0 5px ${matchingConfig.color}`;
-        }
+        if (statusDot) { statusDot.style.backgroundColor = matchingConfig.color; statusDot.style.boxShadow = `0 0 6px ${matchingConfig.color}`; }
     } else {
-        // No matching configuration found
         doorIcon.innerHTML = '';
-        sensorBtn.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.1)';
-        
+        sensorBtn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
         const statusDot = sensorBtn.querySelector('.status-dot');
-        if (statusDot) {
-            statusDot.style.backgroundColor = '#ccc';
-            statusDot.style.boxShadow = 'none';
-        }
+        if (statusDot) { statusDot.style.backgroundColor = '#d1d5db'; statusDot.style.boxShadow = 'none'; }
     }
 }
 
-// WebSocket connection
 function connectWebSocket() {
     ws = new WebSocket(WS_URL);
-
-    ws.onopen = () => {
-        console.log("WebSocket connected");
-        ws.send(JSON.stringify({ type: "auth", access_token: TOKEN }));
-    };
-
+    ws.onopen = () => { ws.send(JSON.stringify({ type: "auth", access_token: TOKEN })); };
     ws.onmessage = (e) => {
         const data = JSON.parse(e.data);
-        console.log("Message:", data.type);
-
         if (data.type === "auth_ok") {
-            console.log("Authentication successful");
-            ready = true;
-            sensorBtn.disabled = false;
-
-            // Get initial state
-            setTimeout(() => {
-                ws.send(JSON.stringify({
-                    id: 1,
-                    type: "get_states"
-                }));
-
-                // Subscribe to changes
-                setTimeout(() => {
-                    ws.send(JSON.stringify({
-                        id: 2,
-                        type: "subscribe_events",
-                        event_type: "state_changed"
-                    }));
-                }, 100);
-            }, 100);
-        }
-        else if (data.type === "result" && data.id === 1) {
+            ready = true; sensorBtn.disabled = false;
+            setTimeout(() => { ws.send(JSON.stringify({ id: 1, type: "get_states" })); setTimeout(() => { ws.send(JSON.stringify({ id: 2, type: "subscribe_events", event_type: "state_changed" })); }, 100); }, 100);
+        } else if (data.type === "result" && data.id === 1) {
             if (data.success && data.result) {
                 const sensor = data.result.find(e => e.entity_id === DOOR_SENSOR_ENTITY);
-                if (sensor) {
-                    currentSensorState = sensor.state;
-                    currentStateValue.textContent = currentSensorState;
-                    updateSensorButton();
-                    console.log(`Initial sensor state: ${currentSensorState}`);
-                } else {
-                    console.error(`Door sensor entity ${DOOR_SENSOR_ENTITY} not found`);
-                    sensorBtn.disabled = true;
-                }
+                if (sensor) { currentSensorState = sensor.state; currentStateValue.textContent = currentSensorState; updateSensorButton(); }
+                else { sensorBtn.disabled = true; }
             }
-        }
-        else if (data.type === "event" && data.event?.event_type === "state_changed") {
+        } else if (data.type === "event" && data.event?.event_type === "state_changed") {
             if (data.event.data.entity_id === DOOR_SENSOR_ENTITY) {
-                currentSensorState = data.event.data.new_state.state;
-                currentStateValue.textContent = currentSensorState;
-                updateSensorButton();
-                console.log(`Sensor state changed to: ${currentSensorState}`);
+                currentSensorState = data.event.data.new_state.state; currentStateValue.textContent = currentSensorState; updateSensorButton();
             }
         }
     };
-
-    ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        sensorBtn.disabled = true;
-    };
-
-    ws.onclose = () => {
-        console.log("WebSocket disconnected");
-        sensorBtn.disabled = true;
-        ready = false;
-        
-        setTimeout(connectWebSocket, 3000);
-    };
+    ws.onerror = () => { sensorBtn.disabled = true; };
+    ws.onclose = () => { sensorBtn.disabled = true; ready = false; setTimeout(connectWebSocket, 3000); };
 }
 
-// Initialize everything
 async function initialize() {
-    // Load available icons
     await loadAvailableIcons();
-    
-    // Load saved configurations
     loadSavedConfigurations();
-    
-    // Make button draggable
     makeButtonDraggable(sensorBtn);
-    
-    // Set up modal event listeners
     document.getElementById('closeModal').addEventListener('click', closeConfigModal);
     document.getElementById('cancelBtn').addEventListener('click', closeConfigModal);
     document.getElementById('saveBtn').addEventListener('click', saveConfigurations);
     document.getElementById('addStateBtn').addEventListener('click', addStateConfig);
-    
-    // Close modal when clicking outside
-    configModal.addEventListener('click', (e) => {
-        if (e.target === configModal) {
-            closeConfigModal();
-        }
-    });
-    
-    // Connect to WebSocket
+    configModal.addEventListener('click', (e) => { if (e.target === configModal) closeConfigModal(); });
     connectWebSocket();
-    
-    console.log('Sensor configuration system initialized');
 }
 
-// Start initialization when page loads
 window.addEventListener('DOMContentLoaded', initialize);
 </script>
 </body>

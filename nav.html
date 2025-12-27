@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sensor Test</title>
+    <style>
+        #panLayer { position: relative; width: 800px; height: 600px; border: 1px solid #ccc; }
+        .light-button { position: absolute; width: 50px; height: 50px; }
+    </style>
+</head>
+<body>
+    <div id="panLayer"></div>
+    
+    <script src="button.js"></script>
+    <script src="sensor.js"></script>
+    <script src="main.js"></script>
+    
+    <script>
+        // Wait for DOM to load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("Testing SensorModule...");
+            
+            // Initialize SensorModule
+            if (window.SensorModule) {
+                const sensor = window.SensorModule.init({});
+                
+                // Test creating a sensor button
+                setTimeout(() => {
+                    const buttonId = sensor.create({
+                        entityId: "binary_sensor.test",
+                        name: "Test Sensor",
+                        position: { x: 0.3, y: 0.3 },
+                        iconClass: "sensor-presence1.svg"
+                    });
+                    
+                    console.log("Created sensor button:", buttonId);
+                }, 100);
+            } else {
+                console.error("SensorModule not available!");
+            }
+        });
+    </script>
+</body>
+</html>

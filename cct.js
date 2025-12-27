@@ -867,28 +867,50 @@ window.CCTModule = (function () {
         currentCCT = null;
     }
 
-    // Update brightness
-    function updateBrightness(brightness) {
-        if (!currentCCT) return;
-
-        const button = document.getElementById(currentCCT.id);
-        if (button) {
-            updateCCTUI(button, brightness, brightness > 0);
-        }
-
-        // Update config
-        const index = cctButtons.findIndex(b => b.id === currentCCT.id);
-        if (index !== -1) {
-            cctButtons[index].brightness = brightness;
-            cctButtons[index].isOn = brightness > 0;
-            saveToLocalStorage();
-        }
-
-        // Call callback
-        if (callbacks.updateCCT) {
-            callbacks.updateCCT(currentCCT.entityId, brightness, currentCCT.temperature, currentCCT.id);
-        }
+// Update brightness function with detailed logging
+function updateBrightness(brightness) {
+    console.log('=== BRIGHTNESS UPDATE ===');
+    console.log('1. New brightness value:', brightness);
+    console.log('2. Current CCT object:', currentCCT);
+    
+    if (!currentCCT) {
+        console.error('No currentCCT set!');
+        return;
     }
+
+    const button = document.getElementById(currentCCT.id);
+    if (button) {
+        console.log('3. Button found, updating UI');
+        updateCCTUI(button, brightness, brightness > 0);
+    }
+
+    // Update config
+    const index = cctButtons.findIndex(b => b.id === currentCCT.id);
+    if (index !== -1) {
+        console.log('4. Updating config - Old brightness:', cctButtons[index].brightness, 'New:', brightness);
+        cctButtons[index].brightness = brightness;
+        cctButtons[index].isOn = brightness > 0;
+        saveToLocalStorage();
+    }
+
+    // Get CURRENT temperature from the slider, not from stale config
+    const currentTemperature = temperatureSlider ? parseInt(temperatureSlider.value) : (currentCCT.temperature || 50);
+    console.log('5. Current temperature from slider:', currentTemperature);
+    
+    // Call callback
+    if (callbacks.updateCCT) {
+        console.log('6. Calling callback with:', {
+            entityId: currentCCT.entityId,
+            brightness: brightness,
+            temperature: currentTemperature, // Use FRESH temperature value
+            buttonId: currentCCT.id
+        });
+        callbacks.updateCCT(currentCCT.entityId, brightness, currentTemperature, currentCCT.id);
+    } else {
+        console.error('7. NO updateCCT callback registered!');
+    }
+    console.log('=== END ===');
+}
 
     // Update temperature
     function updateTemperature(temperature) {

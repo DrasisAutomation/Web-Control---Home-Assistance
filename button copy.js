@@ -592,13 +592,10 @@ window.buttons = (() => {
         const type = item.dataset.type
         const icon = item.dataset.icon || "light-bulb-1.svg"
 
-        console.log("[v0] Button picker clicked:", type, "SensorModule available:", !!window.SensorModule)
-
         // Close picker modal
         document.getElementById("buttonPickerModal").style.display = "none"
 
         if (type === "sensor" && window.SensorModule && typeof window.SensorModule.create === "function") {
-          console.log("[v0] Creating sensor...")
           window.SensorModule.create({
             type: "sensor",
             iconClass: icon,
@@ -614,12 +611,6 @@ window.buttons = (() => {
         } else {
           // For other button types, prompt for entity ID
           const buttonType = BUTTON_TYPES[type]
-
-          if (!buttonType) {
-            console.error("[v0] Unknown button type:", type)
-            return
-          }
-
           const entityId = prompt(`Enter Entity ID for ${buttonType.name}:`, "")
 
           if (entityId && entityId.trim()) {

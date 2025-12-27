@@ -103,7 +103,8 @@ window.LockModule = (function () {
             }
 
             .lock-modal-content {
-                background-color: white;
+                
+                background-color: rgba(255, 255, 255, var(--dimmer-content-opacity, 0.95));
                 border-radius: 12px;
                 width: 350px;
                 height: 350px;
