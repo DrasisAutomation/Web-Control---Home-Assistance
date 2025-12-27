@@ -1152,17 +1152,6 @@ footer.innerHTML = `
             <a href="#" class="nav-square">2</a>
             <a href="#" class="nav-square">3</a>
             <a href="#" class="nav-square">4</a>
-            <a href="#" class="nav-square">5</a>
-            <a href="#" class="nav-square">6</a>
-            <a href="#" class="nav-square">7</a>
-            <a href="#" class="nav-square">8</a>
-            <a href="#" class="nav-square">9</a>
-            <a href="#" class="nav-square">10</a>
-            <a href="#" class="nav-square">11</a>
-            <a href="#" class="nav-square">12</a>
-            <a href="#" class="nav-square">13</a>
-            <a href="#" class="nav-square">14</a>
-            <a href="#" class="nav-square">15</a>
         </div>
     </div>
     <div style="display: flex; gap: 10px;">

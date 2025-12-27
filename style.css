@@ -1014,7 +1014,7 @@ body {
 
 
 .nav-container {
-    width: 200px;
+    width: auto;
     background: white;
     border-radius: 4px;
     overflow: hidden;
