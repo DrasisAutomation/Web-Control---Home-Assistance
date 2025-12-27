@@ -1,8 +1,8 @@
 {
   "meta": {
-    "savedAt": "2025-12-27T11:23:51.311Z",
+    "savedAt": "2025-12-27T12:16:24.396Z",
     "version": "2.0",
-    "totalButtons": 29
+    "totalButtons": 37
   },
   "settings": {
     "buttonSize": 0.7,
@@ -237,6 +237,39 @@
       }
     },
     {
+      "id": "button_1766836555276",
+      "type": "toggle",
+      "entityId": "switch.exp_room_r4",
+      "name": "Light",
+      "iconClass": "chandelier-1.svg",
+      "position": {
+        "x": 0.7415,
+        "y": 0.1758
+      }
+    },
+    {
+      "id": "button_1766836602125",
+      "type": "toggle",
+      "entityId": "switch.exproom_lumi_2ch_r4_2",
+      "name": "Light",
+      "iconClass": "light-bulb-1.svg",
+      "position": {
+        "x": 0.7426,
+        "y": 0.2491
+      }
+    },
+    {
+      "id": "button_1766836660052",
+      "type": "toggle",
+      "entityId": "switch.exproom_lumi_2ch_r4",
+      "name": "Light",
+      "iconClass": "ceiling-light.svg",
+      "position": {
+        "x": 0.7426,
+        "y": 0.3208
+      }
+    },
+    {
       "id": "cct_1766831719602_5g8cr0pa6",
       "type": "cct",
       "entityId": "light.pantry_cct_lighr_exp_room_entrance_light",
@@ -276,6 +309,32 @@
       "temperature": 50
     },
     {
+      "id": "cct_1766836756750_vb8mz7nn6",
+      "type": "cct",
+      "entityId": "light.exp_room_light_2_light",
+      "name": "CCT Light",
+      "iconClass": "dimmer-3.svg",
+      "position": {
+        "x": 0.855,
+        "y": 0.1998
+      },
+      "brightness": 100,
+      "temperature": 23
+    },
+    {
+      "id": "cct_1766836816843_gehf0j0wv",
+      "type": "cct",
+      "entityId": "light.exp_room_light3_light",
+      "name": "CCT Light",
+      "iconClass": "dimmer-3.svg",
+      "position": {
+        "x": 0.855,
+        "y": 0.2988
+      },
+      "brightness": 100,
+      "temperature": 23
+    },
+    {
       "id": "rgb_1766831140852_gh5ssuqa8",
       "type": "rgb",
       "entityId": "light.rgbw_1",
@@ -287,6 +346,19 @@
       },
       "brightness": 50,
       "hue": 21
+    },
+    {
+      "id": "curtain_1766836491632_cm4pinrct",
+      "type": "curtain",
+      "entityId": "cover.exp_room_curtain_outbound_bottom",
+      "name": "Curtain",
+      "iconClass": "curtain1.svg",
+      "position": {
+        "x": 0.7787,
+        "y": 0.0615
+      },
+      "currentPosition": 0,
+      "isOpen": false
     },
     {
       "id": "remote_1766829808282_gahmbpbir",
@@ -351,7 +423,212 @@
         }
       ]
     },
-    
+    {
+      "id": "remote_1766835670535_0rjt9do4y",
+      "type": "remote",
+      "entityId": "remote.mibox4",
+      "name": "Remote",
+      "iconClass": "remote.svg",
+      "position": {
+        "x": 0.6544,
+        "y": 0.2189
+      },
+      "remoteConfig": [
+        {
+          "icon": "youtube.svg",
+          "text": "YoutTube",
+          "entityType": "remote",
+          "textColor": "#ffffff",
+          "bgColor": "#ff0000",
+          "entityId": "remote.mibox4",
+          "service": "remote.turn_on",
+          "command": "https://www.youtube.com"
+        },
+        {
+          "icon": "netflix.svg",
+          "text": "Netflix",
+          "entityType": "remote",
+          "textColor": "#fe0606",
+          "bgColor": "#0a0a0a",
+          "entityId": "remote.mibox4",
+          "service": "remote.turn_on",
+          "command": "https://www.netflix.com/title"
+        },
+        {
+          "icon": "prime.svg",
+          "text": "Prime",
+          "entityType": "remote",
+          "textColor": "#ffffff",
+          "bgColor": "#006eff",
+          "entityId": "remote.mibox4",
+          "service": "remote.turn_on",
+          "command": "https://app.primevideo.com"
+        },
+        {
+          "icon": "home.svg",
+          "text": "HOME",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "HOME"
+        },
+        {
+          "icon": "arrow-up.svg",
+          "text": "UP",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "DPAD_UP"
+        },
+        {
+          "icon": "menu2.svg",
+          "text": "MENU",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "MENU"
+        },
+        {
+          "icon": "arrow-left.svg",
+          "text": "LEFT",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "DPAD_LEFT"
+        },
+        {
+          "icon": "stop.svg",
+          "text": "OK",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "DPAD_CENTER"
+        },
+        {
+          "icon": "arrow-right.svg",
+          "text": "RIGHT",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "DPAD_RIGHT"
+        },
+        {
+          "icon": "pause.svg",
+          "text": "SETTING",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "SETTINGS"
+        },
+        {
+          "icon": "arrow-down.svg",
+          "text": "DOWN",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "DPAD_DOWN"
+        },
+        {
+          "icon": "back.svg",
+          "text": "BACK",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "BACK"
+        },
+        {
+          "icon": "volume-down.svg",
+          "text": "VOL-",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "VOLUME_DOWN"
+        },
+        {
+          "icon": "skip-forward2.svg",
+          "text": "PLAY",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "PLAY"
+        },
+        {
+          "icon": "volume-up.svg",
+          "text": "VOL+",
+          "entityType": "remote",
+          "textColor": "#000000",
+          "bgColor": "#ffffff",
+          "entityId": "remote.mibox4",
+          "service": "remote.send_command",
+          "command": "VOLUME_UP"
+        }
+      ]
+    },
+    {
+      "id": "remote_1766837262243_z25ocmqxa",
+      "type": "remote",
+      "entityId": "switch.exp_room_ac_18",
+      "name": "Remote",
+      "iconClass": "remote.svg",
+      "position": {
+        "x": 0.7218,
+        "y": 0.0615
+      },
+      "remoteConfig": [
+        {
+          "icon": "power.svg",
+          "text": "OFF",
+          "entityType": "switch",
+          "textColor": "#ffffff",
+          "bgColor": "#ff0000",
+          "entityId": "switch.exp_room_ac_off",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "climate.svg",
+          "text": "18 C",
+          "entityType": "switch",
+          "textColor": "#007bff",
+          "bgColor": "#ffffff",
+          "entityId": "switch.exp_room_ac_18",
+          "service": "switch.toggle",
+          "command": ""
+        },
+        {
+          "icon": "climate.svg",
+          "text": "20 C",
+          "entityType": "switch",
+          "textColor": "#427bff",
+          "bgColor": "#ffffff",
+          "entityId": "switch.exp_room_ac_20",
+          "service": "switch.toggle",
+          "command": ""
+        }
+      ]
+    },
     {
       "id": "sensor_1766831311129_frvxpvsjw",
       "type": "sensor",
@@ -686,14 +963,14 @@
           "buttonText": "N/A"
         }
       ],
-      "currentState": "unknown"
+      "currentState": "on"
     },
     {
       "id": "sensor_1766834593484_bzo54xxk2",
       "type": "sensor",
       "entityId": "binary_sensor.glassbreak_1",
       "name": "Sensor",
-      "iconClass": "alarm.svg",
+      "iconClass": "person-fall-1.svg",
       "position": {
         "x": 0.1878,
         "y": 0.3825
@@ -798,7 +1075,7 @@
           "buttonText": "N/A"
         }
       ],
-      "currentState": "unknown"
+      "currentState": "off"
     }
   ]
 }
